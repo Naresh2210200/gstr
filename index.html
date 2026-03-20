@@ -64,6 +64,13 @@ input[type=file]{display:none}
 .pbar.on{display:block}
 .pfil{height:100%;background:linear-gradient(90deg,var(--P),var(--S));width:0%;transition:width .3s;border-radius:10px}
 hr.div{border:none;border-top:1px solid var(--br);margin:1.8rem 0}
+
+.tabs{display:flex;gap:0;border-bottom:2px solid var(--br);margin-bottom:2rem}
+.tab-btn{padding:.75rem 1.8rem;font-size:1rem;font-weight:700;cursor:pointer;border:none;background:none;color:var(--lt);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;font-family:"DM Sans",sans-serif}
+.tab-btn:hover{color:var(--txt)}
+.tab-btn.tab-active{color:var(--P);border-bottom-color:var(--P)}
+.tab-btn.tab-fixer-btn.tab-active{color:#dc2626;border-bottom-color:#dc2626}
+
 @media(max-width:640px){body{padding:1rem}.card{padding:1.5rem}}
 </style>
 </head>
@@ -80,6 +87,12 @@ hr.div{border:none;border-top:1px solid var(--br);margin:1.8rem 0}
     </div>
   </div>
   <div class="card">
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab-btn tab-active" id="tab-converter" onclick="switchTab('converter')">&#128202; Converter</button>
+      <button class="tab-btn tab-fixer-btn" id="tab-fixer" onclick="switchTab('fixer')">&#9889; GSTIN Fixer</button>
+    </div>
+    <div id="panel-converter">
     <div class="step">
       <div class="sth">
         <div class="sn">1</div>
@@ -92,6 +105,10 @@ hr.div{border:none;border-top:1px solid var(--br);margin:1.8rem 0}
       </div>
       <input type="file" id="fi" accept=".csv,.xlsx,.xls" multiple />
       <div id="grpCon"></div>
+    </div><!-- end step 1 -->
+    <!-- ═══ FIXER PANEL ═══ -->
+    
+
     </div>
     <hr class="div">
     <div class="step">
@@ -101,6 +118,45 @@ hr.div{border:none;border-top:1px solid var(--br);margin:1.8rem 0}
       </div>
       <div class="pbar" id="pb"><div class="pfil" id="pf"></div></div>
       <div class="stat" id="stat"></div>
+    </div>
+    </div><!-- end panel-converter -->
+
+    <div id="panel-fixer" style="display:none">
+      <div class="step">
+        <div class="sth">
+          <div class="sn" style="background:linear-gradient(135deg,#dc2626,#991b1b)">1</div>
+          <div class="stl">Upload Files <span class="sub">(GSTIN Error CSV + B2B Source + HSN files OR Speqta output)</span></div>
+        </div>
+        <div class="upz" id="fx-upz" onclick="document.getElementById('fx-fi').click()">
+          <div class="upi">&#9888;&#65039;</div>
+          <div class="upt">Click or drag files here</div>
+          <div class="uph">
+            <b>Required:</b> GSTIN Error CSV &bull;
+            <b>+ one of:</b> Speqta output Excel (already processed) OR B2B CSV/Excel + HSN files
+          </div>
+        </div>
+        <input type="file" id="fx-fi" accept=".csv,.xlsx,.xls" multiple />
+        <div id="fx-file-list" style="margin-top:1rem"></div>
+      </div>
+      
+      <!-- What happens box -->
+      <div style="background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.2);border-radius:10px;padding:1rem 1.2rem;margin:1rem 0;font-size:.85rem;color:var(--lt)">
+        <b style="color:#dc2626">What this fixer does:</b><br>
+        <span style="color:var(--txt)">&#10003;</span> Removes error GSTIN invoices from <b>B2B</b><br>
+        <span style="color:var(--txt)">&#10003;</span> Adds them to <b>B2CS</b> — consolidated by rate (one row per %)<br>
+        <span style="color:var(--txt)">&#10003;</span> Moves matching taxable from <b>HSN B2B → HSN B2C</b> (highest-value row adjusted first)<br>
+        <span style="color:var(--txt)">&#10003;</span> Output: clean Speqta Excel where B2B + B2CS + HSN all reconcile
+      </div>
+
+      <hr class="div">
+      <div class="step">
+        <div class="sth"><div class="sn" style="background:linear-gradient(135deg,#dc2626,#991b1b)">2</div><div class="stl">Fix &amp; Download</div></div>
+        <div class="btns">
+          <button class="btn" id="fx-btn" disabled onclick="runFixer()" style="background:linear-gradient(135deg,#dc2626,#991b1b)">&#9889; Fix &amp; Download</button>
+        </div>
+        <div class="pbar" id="fx-pb"><div class="pfil" id="fx-pf" style="background:linear-gradient(90deg,#dc2626,#f97316)"></div></div>
+        <div class="stat" id="fx-stat"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -708,6 +764,490 @@ async function doProcess(){
 function setStat(m,t){const s=document.getElementById("stat");s.textContent=m;s.className="stat "+t;}
 function setP(v){document.getElementById("pb").classList.add("on");document.getElementById("pf").style.width=v+"%";}
 function clearP(){document.getElementById("pb").classList.remove("on");document.getElementById("pf").style.width="0%";}
+
+// ═══════════════════════════════════════════════════════
+//  TAB SWITCHING
+// ═══════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.getElementById('tab-converter').classList.toggle('tab-active', tab==='converter');
+  document.getElementById('tab-fixer').classList.toggle('tab-active', tab==='fixer');
+  document.getElementById('panel-converter').style.display = tab==='converter'?'block':'none';
+  document.getElementById('panel-fixer').style.display    = tab==='fixer'?'block':'none';
+}
+
+// ═══════════════════════════════════════════════════════
+//  FIXER STATE
+// ═══════════════════════════════════════════════════════
+let fxFiles = { error: null, b2b: [], hsn_b2b: [], hsn_b2c: [], speqta: null };
+
+const fxZone = document.getElementById('fx-upz');
+['dragenter','dragover','dragleave','drop'].forEach(e=>fxZone.addEventListener(e,ev=>{ev.preventDefault();ev.stopPropagation();}));
+['dragenter','dragover'].forEach(e=>fxZone.addEventListener(e,()=>fxZone.classList.add('over')));
+['dragleave','drop'].forEach(e=>fxZone.addEventListener(e,()=>fxZone.classList.remove('over')));
+fxZone.addEventListener('drop', ev=>fxAddFiles(ev.dataTransfer.files));
+document.getElementById('fx-fi').addEventListener('change', ev=>{fxAddFiles(ev.target.files);ev.target.value='';});
+
+function fxAddFiles(list) {
+  Array.from(list).forEach(f => {
+    const u = f.name.toUpperCase().replace(/\s/g,'');
+    // Classify file
+    if (u.includes('GSTINVALIDATE') || u.includes('ERROR') || u.includes('GSTIN_ERR') ||
+        (u.includes('GSTIN') && (u.endsWith('.CSV')||u.endsWith('.XLSX')))) {
+      fxFiles.error = f;
+    } else if (u.endsWith('.XLSX') || u.endsWith('.XLS')) {
+      // Could be Speqta output or one_sale type
+      if (u.includes('SPEQTA') || u.includes('GSTR1')) {
+        fxFiles.speqta = f;
+      } else {
+        // Treat as source data (one_sale type)
+        fxFiles.b2b.push(f);
+      }
+    } else if (u.includes('HSN') && u.includes('B2B')) {
+      fxFiles.hsn_b2b.push(f);
+    } else if (u.includes('HSN') && u.includes('B2C')) {
+      fxFiles.hsn_b2c.push(f);
+    } else if (u.includes('B2B')) {
+      fxFiles.b2b.push(f);
+    }
+  });
+  fxRender();
+  document.getElementById('fx-btn').disabled = !fxFiles.error;
+}
+function fxRmFile(category, idx) {
+  if (idx === undefined) fxFiles[category] = null;
+  else fxFiles[category].splice(idx, 1);
+  fxRender();
+  document.getElementById('fx-btn').disabled = !fxFiles.error;
+}
+
+function fxRender() {
+  const con = document.getElementById('fx-file-list');
+  let h = '';
+  const mkChip = (f, cat, idx) => {
+    const rm = idx===undefined ? `fxRmFile('${cat}')` : `fxRmFile('${cat}',${idx})`;
+    return `<div class="chip"><span class="csvtag">${f.name.toUpperCase().endsWith('.CSV')?'CSV':'XLS'}</span><span>${f.name}</span><span class="csz">${fmtSz(f.size)}</span><button class="crm" onclick="${rm}">&#215;</button></div>`;
+  };
+  if (fxFiles.error) {
+    h += `<div class="sgrp"><div class="sgh"><span class="sbdg" style="background:#dc2626">ERRORS</span><span class="sgttl">GSTIN Error File</span></div><div class="sgf">${mkChip(fxFiles.error,'error')}</div></div>`;
+  }
+  if (fxFiles.speqta) {
+    h += `<div class="sgrp"><div class="sgh"><span class="xbdg">SPEQTA OUTPUT</span><span class="sgttl">Speqta GSTR1 Excel</span></div><div class="sgf">${mkChip(fxFiles.speqta,'speqta')}</div></div>`;
+  }
+  if (fxFiles.b2b.length) {
+    h += `<div class="sgrp"><div class="sgh"><span class="sbdg">B2B</span><span class="sgttl">B2B Source Files</span></div><div class="sgf">${fxFiles.b2b.map((f,i)=>mkChip(f,'b2b',i)).join('')}</div></div>`;
+  }
+  if (fxFiles.hsn_b2b.length||fxFiles.hsn_b2c.length) {
+    h += `<div class="sgrp"><div class="sgh"><span class="sbdg">HSN</span><span class="sgttl">HSN Files</span></div><div class="sgf">${[...fxFiles.hsn_b2b.map((f,i)=>mkChip(f,'hsn_b2b',i)),...fxFiles.hsn_b2c.map((f,i)=>mkChip(f,'hsn_b2c',i))].join('')}</div></div>`;
+  }
+  if (!h) h = '<p style="color:var(--color-text-secondary);font-size:.88rem;padding:.5rem">No files uploaded yet</p>';
+  con.innerHTML = h;
+}
+
+// ─── Parse helpers ───
+function fxReadText(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(f);});}
+function fxReadBuf(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsArrayBuffer(f);});}
+
+async function parseErrorFile(f) {
+  const txt = await fxReadText(f);
+  const lines = txt.trim().split(/\r?\n/);
+  function pl(line){const res=[];let cur='',q=false;for(const c of line){if(c==='"'){q=!q;}else if(c===','&&!q){res.push(cur.trim());cur='';}else cur+=c;}res.push(cur.trim());return res;}
+  const hdrs = pl(lines[0]);
+  const rows = [];
+  for(let i=1;i<lines.length;i++){if(!lines[i].trim())continue;const v=pl(lines[i]);const row={};hdrs.forEach((h,idx)=>{row[h]=v[idx]||'';});rows.push(row);}
+  // Extract unique GSTINs
+  const gstins = new Set();
+  const info = {};
+  for(const r of rows){
+    const g = (r['GSTIN']||r['GSTIN/UIN']||r['gstin']||Object.values(r)[1]||'').trim();
+    if(g){gstins.add(g);info[g]={name:r['Name']||r['name']||'',status:r['Status']||r['status']||''};}
+  }
+  return {gstins, info};
+}
+
+async function parseB2bFile(f) {
+  const u = f.name.toUpperCase();
+  if(u.endsWith('.XLSX')||u.endsWith('.XLS')){
+    const buf = await fxReadBuf(f);
+    const srcWb = XLSX.read(buf,{type:'arraybuffer'});
+    const ws = srcWb.Sheets['b2b'];
+    if(!ws) return [];
+    // Detect header row
+    const range = XLSX.utils.decode_range(ws['!ref']||'A1');
+    let hrow = 0;
+    for(let r=0;r<=Math.min(5,range.e.r);r++){
+      const v = ws[XLSX.utils.encode_cell({r,c:0})];
+      if(v&&v.v&&String(v.v).trim().toUpperCase().includes('GSTIN')){hrow=r;break;}
+    }
+    return xlsxSheetRows(ws,hrow).map(r=>{
+      return {
+        gstin: (r['GSTIN/UIN of Recipient']||r['GSTIN/UIN']||'').trim(),
+        tradeName: r['Receiver Name']||r['Trade Name']||'',
+        invoiceNo: r['Invoice Number']||r['Invoice No']||'',
+        date: r['Invoice date']||r['Date of Invoice']||'',
+        invoiceValue: parseFloat(r['Invoice Value'])||0,
+        rate: parseFloat(r['Rate']||r['GST%'])||0,
+        taxable: parseFloat(r['Taxable Value'])||0,
+        cess: parseFloat(r['Cess Amount']||r['CESS'])||0,
+        pos: cleanPos(r['Place Of Supply']||'Karnataka'),
+        rcm: r['Reverse Charge']||r['RCM Applicable']||'No',
+        invType: (r['Invoice Type']||'Regular').replace(/ B2B$/i,'').replace(/ B2C$/i,'').trim(),
+        ecom: r['E-Commerce GSTIN']||''
+      };
+    });
+  } else {
+    const txt = await fxReadText(f);
+    const rows = parseCSV(txt).map(trimAll);
+    return rows.map(r=>({
+      gstin: (r['GSTIN/UIN of Recipient']||r['GSTIN/UIN']||'').trim(),
+      tradeName: r['Receiver Name']||r['Trade Name']||'',
+      invoiceNo: r['Invoice Number']||r['Invoice No']||'',
+      date: normDate(r['Invoice date']||r['Date of Invoice']||''),
+      invoiceValue: parseFloat(r['Invoice Value'])||0,
+      rate: parseFloat(r['Rate']||r['GST%'])||0,
+      taxable: parseFloat(r['Taxable Value'])||0,
+      cess: parseFloat(r['Cess Amount']||r['CESS'])||0,
+      pos: cleanPos(r['Place Of Supply']||'Karnataka'),
+      rcm: normRCM(r['Reverse Charge']||r['RCM Applicable']||'No'),
+      invType: normInvType(r['Invoice Type']||'Regular'),
+      ecom: r['E-Commerce GSTIN']||''
+    }));
+  }
+}
+
+async function parseHsnFile(f, htype) {
+  const u = f.name.toUpperCase();
+  let rows = [];
+  if(u.endsWith('.XLSX')||u.endsWith('.XLS')){
+    const buf = await fxReadBuf(f);
+    const srcWb = XLSX.read(buf,{type:'arraybuffer'});
+    // Try HSN(B2B) or HSN(B2C) sheet
+    const wsName = htype==='B2B' ? (srcWb.SheetNames.find(n=>n.includes('B2B'))||srcWb.SheetNames[0]) : (srcWb.SheetNames.find(n=>n.includes('B2C'))||srcWb.SheetNames[1]);
+    const ws = srcWb.Sheets[wsName];
+    if(!ws) return [];
+    rows = xlsxSheetRows(ws,0);
+  } else {
+    const txt = await fxReadText(f);
+    rows = parseCSV(txt).map(trimAll);
+  }
+  return rows.map(r=>({
+    type: htype,
+    hsn: (r['HSN']||'').trim(),
+    desc: r['Description']||'',
+    uqc: r['UQC']||'',
+    qty: parseFloat(r['Total Quantity'])||0,
+    totalVal: parseFloat(r['Total Value'])||0,
+    rate: parseFloat(r['Rate'])||0,
+    taxable: parseFloat(r['Taxable Value']||r['Total Taxable Value'])||0,
+    igst: parseFloat(r['Integrated Tax Amount']||r['IGST'])||0,
+    cgst: parseFloat(r['Central Tax Amount']||r['Central Tax Amountt']||r['CGST'])||0,
+    sgst: parseFloat(r['State/UT Tax Amount']||r['State Tax Amount']||r['SGST'])||0,
+    cess: parseFloat(r['Cess Amount']||r['CESS'])||0,
+  })).filter(r=>r.hsn);
+}
+
+// Also parse HSN from Speqta output Excel
+function parseHsnFromSpeqta(ws) {
+  const range = XLSX.utils.decode_range(ws['!ref']||'A1');
+  const hdrs = [];
+  for(let c=range.s.c;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r:0,c})];hdrs.push(cell&&cell.v!=null?cell.v.toString():'');}
+  const rows=[];
+  for(let r=1;r<=range.e.r;r++){
+    const row={};let hasData=false;
+    hdrs.forEach((h,ci)=>{const cell=ws[XLSX.utils.encode_cell({r,c:range.s.c+ci})];const v=cell&&cell.v!=null?cell.v.toString().trim():'';row[h]=v;if(v)hasData=true;});
+    if(hasData)rows.push(row);
+  }
+  return rows.map(r=>({
+    type: r['Type']||'',
+    hsn: (r['HSN']||'').trim(),
+    desc: r['Description']||'',
+    uqc: r['UQC']||'',
+    qty: parseFloat(r['Total Quantity'])||0,
+    totalVal: parseFloat(r['Total Value'])||0,
+    rate: parseFloat(r['Rate'])||0,
+    taxable: parseFloat(r['Total Taxable Value'])||0,
+    igst: parseFloat(r['IGST'])||0,
+    cgst: parseFloat(r['CGST'])||0,
+    sgst: parseFloat(r['SGST'])||0,
+    cess: parseFloat(r['CESS'])||0,
+  })).filter(r=>r.hsn);
+}
+
+// ─── MAIN FIXER ───
+async function runFixer() {
+  const btn = document.getElementById('fx-btn');
+  btn.disabled = true;
+  try {
+    fxStat('Reading error file...','in'); fxP(8);
+
+    // 1. Parse error GSTINs
+    const {gstins: errorGstins, info: errorInfo} = await parseErrorFile(fxFiles.error);
+    fxStat(`Found ${errorGstins.size} error GSTINs...`,'in'); fxP(18);
+
+    // 2. Parse B2B data (from speqta output, or separate b2b files)
+    let allB2b = [];
+    if(fxFiles.speqta) {
+      const buf = await fxReadBuf(fxFiles.speqta);
+      const srcWb = XLSX.read(buf,{type:'arraybuffer'});
+      // Parse b2b sheet from speqta output
+      const ws = srcWb.Sheets['b2b'];
+      if(ws) {
+        const range = XLSX.utils.decode_range(ws['!ref']||'A1');
+        const hdrs = [];
+        for(let c=range.s.c;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r:0,c})];hdrs.push(cell&&cell.v!=null?cell.v.toString():'');}
+        for(let r=1;r<=range.e.r;r++){
+          const row={};let hasData=false;
+          hdrs.forEach((h,ci)=>{const cell=ws[XLSX.utils.encode_cell({r,c:range.s.c+ci})];const v=cell&&cell.v!=null?cell.v:'';row[h]=v;if(v!==''&&v!==null)hasData=true;});
+          if(hasData) allB2b.push({
+            gstin:(row['GSTIN/UIN']||'').toString().trim(),
+            tradeName:row['Trade Name']||'',
+            invoiceNo:row['Invoice No']||'',
+            date:row[' Date of Invoice']||row['Date of Invoice']||'',
+            invoiceValue:parseFloat(row['Invoice Value'])||0,
+            rate:parseFloat(row['GST%'])||0,
+            taxable:parseFloat(row['Taxable Value'])||0,
+            cess:parseFloat(row['CESS'])||0,
+            pos:(row['Place Of Supply']||'Karnataka').toString().trim(),
+            rcm:(row['RCM Applicable']||'No').toString(),
+            invType:(row['Invoice Type']||'Regular').toString(),
+            ecom:(row['E-Commerce GSTIN']||'').toString()
+          });
+        }
+      }
+    }
+    for(const f of fxFiles.b2b) {
+      const rows = await parseB2bFile(f);
+      allB2b.push(...rows);
+    }
+    if(!allB2b.length) throw new Error('No B2B data found. Please upload B2B CSV/Excel or Speqta output file.');
+    fxStat(`Loaded ${allB2b.length} B2B rows...`,'in'); fxP(30);
+
+    // 3. Split B2B into: keep (valid) and move (error GSTINs)
+    const keepB2b  = allB2b.filter(r => !errorGstins.has(r.gstin));
+    const moveRows = allB2b.filter(r =>  errorGstins.has(r.gstin));
+    if(!moveRows.length) {
+      fxStat(`⚠ None of the ${errorGstins.size} error GSTINs found in B2B data. Check if correct files uploaded.`,'er');
+      btn.disabled=false; return;
+    }
+    fxStat(`Moving ${moveRows.length} rows from B2B → B2CS...`,'in'); fxP(42);
+
+    // 4. Aggregate moved rows by Rate → B2CS rows (one per rate, summed)
+    const b2csByRate = {};
+    let movedTaxableByRate = {};  // track how much moved per rate
+    for(const r of moveRows) {
+      const rate = r.rate;
+      if(!b2csByRate[rate]) {
+        b2csByRate[rate] = {taxable:0, cess:0, pos:'Karnataka'};
+        movedTaxableByRate[rate] = 0;
+      }
+      b2csByRate[rate].taxable += r.taxable;
+      b2csByRate[rate].cess    += r.cess;
+      movedTaxableByRate[rate] += r.taxable;
+      // Use most common POS
+      if(r.pos && r.pos!=='Karnataka') b2csByRate[rate].pos = r.pos;
+    }
+
+    // 5. Parse HSN data
+    let hsnB2b = [], hsnB2c = [];
+    if(fxFiles.speqta) {
+      const buf = await fxReadBuf(fxFiles.speqta);
+      const srcWb = XLSX.read(buf,{type:'arraybuffer'});
+      const ws = srcWb.Sheets['hsn'];
+      if(ws) {
+        const all = parseHsnFromSpeqta(ws);
+        hsnB2b = all.filter(r=>r.type==='B2B');
+        hsnB2c = all.filter(r=>r.type==='B2C');
+      }
+    }
+    for(const f of fxFiles.hsn_b2b){const rows=await parseHsnFile(f,'B2B');hsnB2b.push(...rows);}
+    for(const f of fxFiles.hsn_b2c){const rows=await parseHsnFile(f,'B2C');hsnB2c.push(...rows);}
+    fxStat(`Adjusting HSN (${hsnB2b.length} B2B rows, ${hsnB2c.length} B2C rows)...`,'in'); fxP(55);
+
+    // 6. HSN adjustment per rate
+    // Total B2B taxable per rate (before removal)
+    const totalB2bTaxableByRate = {};
+    for(const r of hsnB2b){
+      if(!totalB2bTaxableByRate[r.rate]) totalB2bTaxableByRate[r.rate]=0;
+      totalB2bTaxableByRate[r.rate]+=r.taxable;
+    }
+
+    // For each rate with moved taxable:
+    // - Find all B2B HSN rows for that rate
+    // - Pick the one with HIGHEST taxable (as instructed)
+    // - Subtract the moved amount from that HSN row (proportionally if needed)
+    // - Add to corresponding B2C HSN row (highest taxable for that rate in B2C, or create)
+
+    const newHsnB2b = JSON.parse(JSON.stringify(hsnB2b));
+    const newHsnB2c = JSON.parse(JSON.stringify(hsnB2c));
+
+    for(const [rateStr, movedTaxable] of Object.entries(movedTaxableByRate)) {
+      const rate = parseFloat(rateStr);
+      if(!movedTaxable) continue;
+
+      // Find B2B HSN rows for this rate, sorted by taxable DESC (highest first)
+      const b2bForRate = newHsnB2b
+        .map((r,i)=>({...r,idx:i}))
+        .filter(r=>r.rate===rate)
+        .sort((a,b)=>b.taxable-a.taxable);
+
+      if(!b2bForRate.length) continue;
+
+      // Deduct from the highest-taxable B2B HSN row
+      let remaining = movedTaxable;
+      for(const hsnRow of b2bForRate){
+        if(remaining<=0) break;
+        const deduct = Math.min(remaining, hsnRow.taxable);
+        const ratio = deduct / (hsnRow.taxable||1);
+        const i = hsnRow.idx;
+        newHsnB2b[i].taxable  = Math.max(0, newHsnB2b[i].taxable  - deduct);
+        newHsnB2b[i].totalVal = Math.max(0, newHsnB2b[i].totalVal - deduct - deduct*rate/100);
+        newHsnB2b[i].cgst     = Math.max(0, newHsnB2b[i].cgst     - deduct*rate/2/100);
+        newHsnB2b[i].sgst     = Math.max(0, newHsnB2b[i].sgst     - deduct*rate/2/100);
+        newHsnB2b[i].igst     = Math.max(0, newHsnB2b[i].igst     - deduct*rate/100);
+        newHsnB2b[i].qty      = Math.max(0, Math.round(newHsnB2b[i].qty * (1-ratio)));
+
+        // Add same amount to B2C HSN - find matching HSN code in B2C (highest taxable)
+        const b2cMatch = newHsnB2c
+          .map((r,i)=>({...r,idx:i}))
+          .filter(r=>r.hsn===hsnRow.hsn && r.rate===rate)
+          .sort((a,b)=>b.taxable-a.taxable);
+
+        if(b2cMatch.length>0){
+          const j = b2cMatch[0].idx;
+          newHsnB2c[j].taxable  += deduct;
+          newHsnB2c[j].totalVal += deduct + deduct*rate/100;
+          newHsnB2c[j].cgst     += deduct*rate/2/100;
+          newHsnB2c[j].sgst     += deduct*rate/2/100;
+          newHsnB2c[j].igst     += deduct*rate/100;
+          newHsnB2c[j].qty      += Math.round(hsnRow.qty * ratio);
+        } else {
+          // Create new B2C HSN row
+          newHsnB2c.push({
+            type:'B2C', hsn:hsnRow.hsn, desc:hsnRow.desc, uqc:hsnRow.uqc,
+            qty:Math.round(hsnRow.qty*ratio), totalVal:deduct+deduct*rate/100,
+            rate:rate, taxable:deduct,
+            igst:deduct*rate/100, cgst:deduct*rate/2/100,
+            sgst:deduct*rate/2/100, cess:0
+          });
+        }
+        remaining -= deduct;
+      }
+    }
+    fxP(70);
+
+    // 7. Build output workbook from blank template
+    fxStat('Building output Excel...','in');
+    const tmplBin = Uint8Array.from(atob(TMPL),c=>c.charCodeAt(0));
+    const outWb = XLSX.read(tmplBin,{type:'array',cellStyles:true});
+
+    // Helper: write rows to a sheet
+    function fxWriteRows(ws, rows) {
+      if(!rows||!rows.length)return;
+      const range=XLSX.utils.decode_range(ws['!ref']||'A1');
+      const thdrs=[];
+      for(let c=range.s.c;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r:0,c})];thdrs.push(cell&&cell.v!=null?cell.v.toString():'');}
+      let wr=1;
+      for(let r=1;r<=range.e.r;r++){let has=false;for(let c=range.s.c;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r,c})];if(cell&&cell.v!=null&&cell.v!==''){has=true;break;}}if(has)wr=r+1;}
+      rows.forEach((row,ri)=>{
+        const er=wr+ri;
+        thdrs.forEach((th,ci)=>{
+          if(!th)return;
+          const val=row[th]!==undefined?row[th]:'';
+          const addr=XLSX.utils.encode_cell({r:er,c:range.s.c+ci});
+          if(val===''||val===undefined||val===null){ws[addr]={t:'s',v:''};return;}
+          const sv=val.toString().trim();
+          const n=parseFloat(sv.replace(/,/g,''));
+          if(!isNaN(n)&&sv.match(/^-?\d+\.?\d*$/)&&sv!=='')ws[addr]={t:'n',v:n};
+          else ws[addr]={t:'s',v:sv};
+        });
+      });
+      range.e.r=Math.max(range.e.r,wr+rows.length-1);
+      ws['!ref']=XLSX.utils.encode_range(range);
+    }
+
+    // Write B2B (kept rows only)
+    const wsB2b = outWb.Sheets['b2b'];
+    const b2bOut = keepB2b.map(r=>({
+      'GSTIN/UIN':r.gstin,'Trade Name':r.tradeName,'Invoice No':r.invoiceNo,
+      ' Date of Invoice':r.date,'Invoice Value':r.invoiceValue||'',
+      'GST%':r.rate,'Taxable Value':r.taxable,'CESS':r.cess||'',
+      'Place Of Supply':r.pos,'RCM Applicable':r.rcm,'Invoice Type':r.invType,'E-Commerce GSTIN':r.ecom||''
+    }));
+    fxWriteRows(wsB2b, b2bOut);
+
+    // Write B2CS (existing rows NOT affected + new consolidated rows from moved B2B)
+    // First get existing B2CS from speqta if available
+    let existingB2cs = [];
+    if(fxFiles.speqta){
+      const buf=await fxReadBuf(fxFiles.speqta);
+      const srcWb=XLSX.read(buf,{type:'arraybuffer'});
+      const ws=srcWb.Sheets['b2cs'];
+      if(ws){
+        const range=XLSX.utils.decode_range(ws['!ref']||'A1');
+        const hdrs=[];
+        for(let c=range.s.c;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r:0,c})];hdrs.push(cell&&cell.v!=null?cell.v.toString():'');}
+        for(let r=1;r<=range.e.r;r++){
+          const row={};let has=false;
+          hdrs.forEach((h,ci)=>{const cell=ws[XLSX.utils.encode_cell({r,c:range.s.c+ci})];const v=cell&&cell.v!=null?cell.v:'';row[h]=v;if(v!==''&&v!==null)has=true;});
+          if(has)existingB2cs.push(row);
+        }
+      }
+    }
+    const wsB2cs = outWb.Sheets['b2cs'];
+    // Write existing b2cs first
+    fxWriteRows(wsB2cs, existingB2cs);
+    // Then append new consolidated B2CS rows from moved invoices
+    const newB2csRows = Object.entries(b2csByRate).map(([rate,agg])=>({
+      'GST%':parseFloat(rate),'Taxable Value':+agg.taxable.toFixed(2),
+      'CESS':+agg.cess.toFixed(2)||'','Place Of Supply':agg.pos,'GSTIN of E-Commerce Operator':''
+    }));
+    fxWriteRows(wsB2cs, newB2csRows);
+
+    // Write HSN (B2B then B2C) - filter out rows with zero taxable
+    const wsHsn = outWb.Sheets['hsn'];
+    const hsnOut = [
+      ...newHsnB2b.filter(r=>r.taxable>0.01).map(r=>({
+        'Type':'B2B','HSN':r.hsn,'Description':r.desc,'UQC':r.uqc,
+        'Total Quantity':r.qty,'Total Value':+r.totalVal.toFixed(2),'Rate':r.rate,
+        'Total Taxable Value':+r.taxable.toFixed(2),'IGST':+r.igst.toFixed(2),
+        'CGST':+r.cgst.toFixed(2),'SGST':+r.sgst.toFixed(2),'CESS':+r.cess.toFixed(2)
+      })),
+      ...newHsnB2c.filter(r=>r.taxable>0.01).map(r=>({
+        'Type':'B2C','HSN':r.hsn,'Description':r.desc,'UQC':r.uqc,
+        'Total Quantity':r.qty,'Total Value':+r.totalVal.toFixed(2),'Rate':r.rate,
+        'Total Taxable Value':+r.taxable.toFixed(2),'IGST':+r.igst.toFixed(2),
+        'CGST':+r.cgst.toFixed(2),'SGST':+r.sgst.toFixed(2),'CESS':+r.cess.toFixed(2)
+      }))
+    ];
+    fxWriteRows(wsHsn, hsnOut);
+
+    fxP(90);
+
+    // 8. Download
+    const outData = XLSX.write(outWb,{bookType:'xlsx',type:'array',cellStyles:true});
+    const blob = new Blob([outData],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,-5);
+    saveAs(blob,'GSTR1_Fixed_'+ts+'.xlsx');
+    fxP(100);
+
+    // Show summary
+    const movedCount = moveRows.length;
+    const movedTaxTotal = moveRows.reduce((s,r)=>s+r.taxable,0);
+    const ratesAffected = Object.keys(b2csByRate).join('%, ')+'%';
+    fxStat(`✅ Done! Moved ${movedCount} B2B rows (₹${movedTaxTotal.toFixed(2)} taxable) at rates ${ratesAffected} → B2CS. HSN adjusted.`,'ok');
+    setTimeout(fxClearP,4000);
+  } catch(e){
+    console.error(e);
+    fxStat('❌ Error: '+e.message,'er');
+    fxClearP();
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function fxStat(m,t){const s=document.getElementById('fx-stat');s.textContent=m;s.className='stat '+t;}
+function fxP(v){document.getElementById('fx-pb').classList.add('on');document.getElementById('fx-pf').style.width=v+'%';}
+function fxClearP(){document.getElementById('fx-pb').classList.remove('on');document.getElementById('fx-pf').style.width='0%';}
+
 </script>
 </body>
 </html>
