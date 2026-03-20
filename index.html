@@ -1,1346 +1,517 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>GST Suite — Sales & Purchase</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-  <style>
-    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GSTR1 Processor – FAB SAL</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--P:#2563eb;--PD:#1e40af;--S:#10b981;--E:#ef4444;--W:#f59e0b;--bg:#f8fafc;--card:#fff;--txt:#1e293b;--lt:#64748b;--br:#e2e8f0;--sh:0 4px 6px -1px rgba(0,0,0,.1);--shl:0 20px 25px -5px rgba(0,0,0,.1)}
+body{font-family:"DM Sans",sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:2rem;color:var(--txt)}
+.wrap{max-width:1060px;margin:0 auto}
+.hdr{text-align:center;margin-bottom:2.5rem;color:#fff}
+.hdr h1{font-size:2.2rem;font-weight:700;font-family:"Space Mono",monospace;text-shadow:2px 2px 4px rgba(0,0,0,.2)}
+.hdr p{font-size:1rem;opacity:.95;margin-top:.4rem}
+.badges{display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap;margin-top:.8rem}
+.bdg{background:rgba(255,255,255,.2);padding:.35rem .9rem;border-radius:20px;font-size:.82rem}
+.card{background:var(--card);border-radius:20px;padding:2.5rem;box-shadow:var(--shl)}
+.step{margin-bottom:1.8rem}
+.sth{display:flex;align-items:center;gap:1rem;margin-bottom:1rem}
+.sn{width:38px;height:38px;background:linear-gradient(135deg,var(--P),var(--PD));color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:"Space Mono",monospace;flex-shrink:0;box-shadow:var(--sh)}
+.stl{font-size:1.15rem;font-weight:700;color:var(--txt)}
+.sub{font-size:.8rem;font-weight:400;color:var(--lt)}
 
-    :root {
-      --sales-from:   #f59e0b;
-      --sales-to:     #ef4444;
-      --purchase-from:#06b6d4;
-      --purchase-to:  #6366f1;
-      --multi-from:   #a855f7;
-      --multi-to:     #06b6d4;
+/* Format tabs */
+.ftabs{display:flex;gap:.8rem;margin-bottom:1rem}
+.ftab{flex:1;padding:1.1rem;border-radius:12px;border:2px solid var(--br);background:var(--bg);cursor:pointer;transition:all .3s;text-align:center}
+.ftab:hover{border-color:var(--P);transform:translateY(-2px);box-shadow:var(--sh)}
+.ftab.on{border-color:var(--P);background:rgba(37,99,235,.07)}
+.ftab .fi{font-size:1.7rem;margin-bottom:.3rem}
+.ftab .fn{font-weight:700;font-size:1rem;color:var(--txt)}
+.ftab .fd{font-size:.78rem;color:var(--lt);margin-top:.15rem}
 
-      --bg:    #0f1117;
-      --bg2:   #161923;
-      --bg3:   #1d2333;
-      --card:  #1a2035;
-      --border:#2a3450;
-      --text:  #e8edf5;
-      --muted: #6b7a99;
-      --success:#22c55e;
-      --danger: #ef4444;
+/* Format info box */
+.finfo{background:rgba(37,99,235,.05);border:1px solid rgba(37,99,235,.2);border-radius:10px;padding:.9rem 1rem;margin-bottom:1.5rem;font-size:.85rem;color:var(--lt);display:none}
+.finfo.on{display:block}
+.finfo b{color:var(--P)}
 
-      --accent: #f59e0b;
-      --shadow: 0 8px 32px rgba(0,0,0,.45);
-    }
+/* Upload zone */
+.upz{border:3px dashed var(--br);border-radius:14px;padding:2.2rem 2rem;text-align:center;background:var(--bg);transition:all .3s;cursor:pointer}
+.upz:hover{border-color:var(--P);background:rgba(37,99,235,.03)}
+.upz.over{border-color:var(--P);background:rgba(37,99,235,.08);transform:scale(1.01)}
+.upi{font-size:2.4rem;margin-bottom:.6rem;opacity:.6}
+.upt{font-size:1rem;color:var(--txt);margin-bottom:.3rem}
+.uph{font-size:.82rem;color:var(--lt)}
+input[type=file]{display:none}
 
-    body {
-      font-family: 'DM Sans', sans-serif;
-      background: var(--bg);
-      min-height: 100vh;
-      color: var(--text);
-    }
+/* Sheet groups */
+.sgroups{margin-top:1.4rem;display:flex;flex-direction:column;gap:.7rem}
+.sgrp{background:var(--bg);border:1px solid var(--br);border-radius:12px;overflow:hidden}
+.sgh{display:flex;align-items:center;gap:.7rem;padding:.7rem 1rem;background:rgba(37,99,235,.05);border-bottom:1px solid var(--br);flex-wrap:wrap}
+.sbdg{background:var(--P);color:#fff;font-size:.68rem;font-weight:700;padding:.18rem .55rem;border-radius:5px;font-family:"Space Mono",monospace}
+.sgttl{font-weight:700;font-size:.88rem;color:var(--txt)}
+.ctag{margin-left:auto;background:rgba(16,185,129,.12);color:var(--S);font-size:.72rem;font-weight:700;padding:.18rem .55rem;border-radius:5px}
+.fmttag{background:rgba(245,158,11,.12);color:var(--W);font-size:.68rem;font-weight:700;padding:.15rem .5rem;border-radius:5px}
+.xceltag{background:rgba(37,99,235,.1);color:var(--P);font-size:.68rem;font-weight:700;padding:.15rem .5rem;border-radius:5px}
+.sgf{display:flex;flex-wrap:wrap;gap:.5rem;padding:.7rem 1rem}
+.chip{background:#fff;border:1px solid var(--br);border-radius:7px;padding:.4rem .7rem;display:flex;align-items:center;gap:.45rem;font-size:.82rem;font-weight:500;transition:all .2s;animation:pop .2s ease}
+@keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+.chip:hover{box-shadow:var(--sh)}
+.csz{font-size:.7rem;color:var(--lt)}
+.crm{background:none;border:none;color:var(--E);cursor:pointer;font-size:1.05rem;padding:0 .1rem;border-radius:3px;line-height:1}
+.crm:hover{background:rgba(239,68,68,.1)}
+.unrec{margin-top:.7rem;background:rgba(245,158,11,.06);border:1px dashed var(--W);border-radius:9px;padding:.7rem 1rem}
+.urt{font-size:.8rem;font-weight:700;color:var(--W);margin-bottom:.45rem}
 
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none; z-index: 0; opacity: .5;
-    }
-
-    .container { max-width: 1060px; margin: 0 auto; padding: 2rem 1.25rem; position: relative; z-index: 1; }
-
-    .masthead { text-align: center; padding: 2.5rem 1rem 2rem; animation: fadeDown .6s ease both; }
-    .masthead-logo {
-      display: inline-flex; align-items: center; gap: .6rem;
-      font-family: 'Syne', sans-serif; font-size: 2.6rem; font-weight: 800;
-      background: linear-gradient(120deg, #f59e0b, #ef4444 40%, #06b6d4 70%, #6366f1);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text; letter-spacing: -1.5px; margin-bottom: .4rem;
-    }
-    .masthead-sub { color: var(--muted); font-size: .95rem; }
-    .masthead-tag {
-      display: inline-block; margin-top: .75rem;
-      background: rgba(255,255,255,.05); border: 1px solid var(--border);
-      color: var(--muted); padding: .3rem .9rem; border-radius: 20px;
-      font-family: 'DM Mono', monospace; font-size: .76rem;
-    }
-
-    .tab-switcher {
-      display: flex; gap: .5rem;
-      background: var(--bg3); border: 1px solid var(--border);
-      border-radius: 16px; padding: .4rem;
-      margin-bottom: 2rem;
-    }
-    .tab-btn {
-      flex: 1; padding: .85rem 1.5rem;
-      border: none; border-radius: 12px; cursor: pointer;
-      font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700;
-      transition: all .3s ease;
-      color: var(--muted); background: transparent;
-      display: flex; align-items: center; justify-content: center; gap: .5rem;
-    }
-    .tab-btn.active-sales { background: linear-gradient(135deg, var(--sales-from), var(--sales-to)); color: #fff; box-shadow: 0 4px 20px rgba(245,158,11,.3); }
-    .tab-btn.active-purchase { background: linear-gradient(135deg, var(--purchase-from), var(--purchase-to)); color: #fff; box-shadow: 0 4px 20px rgba(99,102,241,.3); }
-    .tab-pill { font-size: .68rem; background: rgba(255,255,255,.18); padding: .1rem .45rem; border-radius: 10px; font-family: 'DM Mono', monospace; }
-
-    .panel { display: none; animation: panelIn .35s ease both; }
-    .panel.active { display: block; }
-    @keyframes panelIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
-
-    .card {
-      background: var(--card); border: 1px solid var(--border);
-      border-radius: 18px; padding: 1.75rem;
-      box-shadow: var(--shadow); margin-bottom: 1.25rem;
-    }
-    .step-header { display: flex; align-items: center; gap: .85rem; margin-bottom: 1.4rem; }
-    .step-num {
-      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'DM Mono', monospace; font-size: .9rem; font-weight: 500;
-    }
-    .step-num.sales-num    { background: linear-gradient(135deg,var(--sales-from),var(--sales-to)); }
-    .step-num.purchase-num { background: linear-gradient(135deg,var(--purchase-from),var(--purchase-to)); }
-
-    /* ── FORMAT SELECTOR ── */
-    .format-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: .75rem; }
-    @media(max-width:640px) { .format-grid { grid-template-columns: 1fr; } }
-    .fmt-option {
-      padding: 1.2rem; border-radius: 12px;
-      border: 2px solid var(--border); background: var(--bg3);
-      cursor: pointer; transition: all .25s ease; text-align: center;
-      position: relative; overflow: hidden;
-    }
-    .fmt-option:hover { border-color: var(--sales-from); transform: translateY(-2px); }
-    .fmt-option.active { border-color: var(--sales-from); background: rgba(245,158,11,.08); }
-    .fmt-option.multi-opt:hover { border-color: var(--multi-from); }
-    .fmt-option.multi-opt.active { border-color: var(--multi-from); background: rgba(168,85,247,.08); }
-    .fmt-option .multi-badge {
-      position: absolute; top: 8px; right: 8px;
-      background: linear-gradient(135deg,var(--multi-from),var(--multi-to));
-      color: #fff; font-size: .6rem; font-weight: 700; padding: .15rem .45rem;
-      border-radius: 20px; font-family: 'DM Mono', monospace; letter-spacing: .5px;
-    }
-    .fmt-icon { font-size: 1.8rem; margin-bottom: .4rem; }
-    .fmt-name { font-family: 'Syne', sans-serif; font-weight: 700; font-size: .95rem; }
-    .fmt-desc { font-size: .78rem; color: var(--muted); margin-top: .2rem; }
-
-    /* ── MULTI MODE INDICATOR ── */
-    .multi-mode-banner {
-      display: none; align-items: center; gap: .75rem;
-      padding: .9rem 1.25rem; border-radius: 12px; margin-bottom: 1rem;
-      background: linear-gradient(135deg, rgba(168,85,247,.12), rgba(6,182,212,.08));
-      border: 1px solid rgba(168,85,247,.3);
-    }
-    .multi-mode-banner.show { display: flex; }
-    .multi-badge-pill {
-      display: inline-flex; align-items: center; gap: .4rem;
-      background: linear-gradient(135deg,var(--multi-from),var(--multi-to));
-      color: #fff; font-size: .75rem; font-weight: 700; padding: .3rem .8rem;
-      border-radius: 20px; font-family: 'DM Mono', monospace; white-space: nowrap; flex-shrink:0;
-    }
-    .multi-mode-text { font-size: .85rem; color: var(--text); }
-    .multi-mode-text strong { color: #c4b5fd; }
-
-    /* ── BATCH COUNTER ── */
-    .batch-counter {
-      display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: .75rem;
-    }
-    .batch-tag {
-      display: inline-flex; align-items: center; gap: .4rem;
-      background: rgba(168,85,247,.15); border: 1px solid rgba(168,85,247,.3);
-      color: #c4b5fd; font-size: .72rem; font-weight: 700; padding: .25rem .65rem;
-      border-radius: 20px; font-family: 'DM Mono', monospace;
-      animation: fadeIn .2s ease;
-    }
-    .batch-clear-btn {
-      background: none; border: none; color: var(--muted); cursor: pointer;
-      font-size: .85rem; padding: 0 .1rem; transition: color .15s;
-    }
-    .batch-clear-btn:hover { color: var(--danger); }
-
-    /* ── GROUP DIVIDER in file list ── */
-    .file-group-label {
-      grid-column: 1 / -1;
-      font-size: .7rem; font-weight: 700; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 1px;
-      padding: .4rem .2rem .1rem;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: .25rem;
-      font-family: 'DM Mono', monospace;
-    }
-
-    /* ── UPLOAD ZONE ── */
-    .upload-zone {
-      border: 2px dashed var(--border); border-radius: 14px; padding: 2.5rem 2rem;
-      text-align: center; cursor: pointer; transition: all .25s ease; background: var(--bg3);
-    }
-    .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: rgba(245,158,11,.05); transform: translateY(-2px); }
-    .upload-zone.purchase:hover, .upload-zone.purchase.dragover { border-color: var(--purchase-from); background: rgba(6,182,212,.05); }
-    .upload-zone.multi-zone:hover, .upload-zone.multi-zone.dragover { border-color: var(--multi-from); background: rgba(168,85,247,.05); }
-    .upload-icon { font-size: 2.5rem; margin-bottom: .75rem; display: block; }
-    .upload-text { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; margin-bottom: .3rem; }
-    .upload-hint { font-size: .82rem; color: var(--muted); }
-    input[type="file"] { display: none; }
-
-    /* ── FILE LIST ── */
-    .file-list { display: grid; grid-template-columns: repeat(auto-fill,minmax(210px,1fr)); gap: .6rem; margin-top: 1rem; }
-    .file-item {
-      background: var(--bg3); border: 1px solid var(--border); border-radius: 10px;
-      padding: .75rem 1rem; display: flex; align-items: center; gap: .65rem;
-      animation: fadeIn .2s ease both; transition: all .2s;
-    }
-    .file-item:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
-    .file-item.multi-item { border-color: rgba(168,85,247,.25); }
-    .file-icon { font-size: 1.3rem; flex-shrink: 0; }
-    .file-info { flex: 1; min-width: 0; }
-    .file-name { font-size: .8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .file-size { font-size: .7rem; color: var(--muted); margin-top: 1px; }
-    .file-batch-dot { font-size: .65rem; color: #c4b5fd; font-family: 'DM Mono', monospace; margin-top: 2px; }
-    .remove-btn {
-      background: none; border: none; color: var(--muted); cursor: pointer;
-      font-size: 1rem; padding: .2rem; border-radius: 4px; transition: all .15s; flex-shrink: 0;
-    }
-    .remove-btn:hover { background: rgba(239,68,68,.15); color: var(--danger); }
-
-    /* ── MERGE SUMMARY BAR ── */
-    .merge-summary {
-      display: none; gap: .5rem; flex-wrap: wrap; align-items: center;
-      padding: .75rem 1rem; border-radius: 10px; margin-top: .75rem;
-      background: rgba(168,85,247,.08); border: 1px solid rgba(168,85,247,.2);
-      font-size: .8rem;
-    }
-    .merge-summary.show { display: flex; }
-    .merge-pill {
-      background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
-      padding: .2rem .6rem; font-family: 'DM Mono', monospace; font-size: .7rem;
-      display: flex; align-items: center; gap: .3rem;
-    }
-    .merge-pill-count { color: #c4b5fd; font-weight: 700; }
-    .merge-pill-label { color: var(--muted); }
-
-    /* ── ACTION BTN ── */
-    .action-btn {
-      width: 100%; padding: 1rem; border: none; border-radius: 12px;
-      font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700;
-      cursor: pointer; transition: all .25s ease; letter-spacing: .5px;
-      display: flex; align-items: center; justify-content: center; gap: .5rem; margin-top: 1.25rem;
-    }
-    .action-btn:disabled { opacity: .35; cursor: not-allowed; transform: none !important; }
-    .sales-btn    { background: linear-gradient(135deg,var(--sales-from),var(--sales-to));    color: #fff; box-shadow: 0 4px 20px rgba(245,158,11,.3); }
-    .purchase-btn { background: linear-gradient(135deg,var(--purchase-from),var(--purchase-to)); color: #fff; box-shadow: 0 4px 20px rgba(99,102,241,.3); }
-    .multi-btn    { background: linear-gradient(135deg,var(--multi-from),var(--multi-to));    color: #fff; box-shadow: 0 4px 20px rgba(168,85,247,.3); }
-    .sales-btn:hover:not(:disabled)    { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(245,158,11,.4); }
-    .purchase-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(99,102,241,.4); }
-    .multi-btn:hover:not(:disabled)    { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(168,85,247,.4); }
-
-    /* ── STATUS ── */
-    .status-bar { margin-top: 1rem; padding: .85rem 1rem; border-radius: 10px; font-size: .85rem; font-weight: 500; display: none; }
-    .status-bar.show { display: block; }
-    .status-bar.info    { background: rgba(99,102,241,.12); border: 1px solid rgba(99,102,241,.3); color: #a5b4fc; }
-    .status-bar.success { background: rgba(34,197,94,.1);  border: 1px solid rgba(34,197,94,.3);  color: #86efac; }
-    .status-bar.error   { background: rgba(239,68,68,.1);  border: 1px solid rgba(239,68,68,.3);  color: #fca5a5; }
-
-    /* ── PROGRESS ── */
-    .progress-wrap { margin-top: 1rem; height: 6px; background: var(--border); border-radius: 10px; overflow: hidden; display: none; }
-    .progress-wrap.show { display: block; }
-    .progress-fill { height: 100%; border-radius: 10px; width: 0%; transition: width .3s ease; }
-    .sales-fill    { background: linear-gradient(90deg,var(--sales-from),var(--sales-to)); }
-    .purchase-fill { background: linear-gradient(90deg,var(--purchase-from),var(--purchase-to)); }
-    .multi-fill    { background: linear-gradient(90deg,var(--multi-from),var(--multi-to)); }
-
-    /* ── PURCHASE / PROCESSING ── */
-    .processing-bar { display: none; align-items: center; gap: 1rem; padding: 1.25rem; background: var(--bg3); border: 1px solid var(--border); border-radius: 14px; margin-bottom: 1rem; }
-    .processing-bar.show { display: flex; }
-    .spinner { width: 26px; height: 26px; border: 3px solid var(--border); border-top-color: var(--purchase-from); border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .proc-text { font-weight: 600; font-size: .95rem; }
-    .proc-sub  { font-size: .78rem; color: var(--muted); margin-top: 2px; }
-
-    .summary-box { display: none; background: var(--bg3); border: 1px solid rgba(34,197,94,.25); border-radius: 14px; padding: 1.5rem; margin-bottom: 1.25rem; }
-    .summary-box.show { display: block; }
-    .summary-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
-    .summary-title { font-family: 'Syne', sans-serif; font-size: 1.3rem; font-weight: 800; display: flex; align-items: center; gap: .5rem; }
-    .reset-btn { background: none; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); padding: .35rem .8rem; cursor: pointer; font-size: .8rem; transition: all .2s; }
-    .reset-btn:hover { background: rgba(239,68,68,.12); color: var(--danger); border-color: var(--danger); }
-
-    .stats-grid { display: grid; grid-template-columns: repeat(6,1fr); gap: .6rem; margin-bottom: 1.25rem; }
-    @media(max-width: 768px) { .stats-grid { grid-template-columns: repeat(3,1fr); } }
-    .stat-box { border-radius: 12px; padding: .9rem .75rem; text-align: center; border: 1px solid var(--border); background: var(--bg2); }
-    .stat-label { font-size: .68rem; color: var(--muted); margin-bottom: .25rem; }
-    .stat-val { font-family: 'DM Mono', monospace; font-size: 1.2rem; font-weight: 500; }
-    .sv-cyan  { color: var(--purchase-from); }
-    .sv-green { color: var(--success); }
-    .sv-red   { color: var(--danger); }
-    .sv-indigo{ color: #818cf8; }
-    .sv-amber { color: var(--sales-from); }
-    .sv-purple{ color: #a78bfa; }
-
-    .dl-all-btn { display: flex; align-items: center; justify-content: center; gap: .6rem; width: 100%; padding: .9rem; background: linear-gradient(135deg,var(--success),#16a34a); color: #fff; border: none; border-radius: 12px; font-family: 'Syne', sans-serif; font-size: .95rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 16px rgba(34,197,94,.25); transition: all .25s; }
-    .dl-all-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(34,197,94,.35); }
-    .dl-all-btn:disabled { opacity: .45; cursor: not-allowed; }
-
-    .results-wrap { max-height: 480px; overflow-y: auto; padding-right: 2px; display: flex; flex-direction: column; gap: .5rem; }
-    .results-wrap::-webkit-scrollbar { width: 4px; }
-    .results-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
-
-    .result-row { border-radius: 12px; overflow: hidden; border: 1px solid; }
-    .result-row.ok  { border-color: rgba(34,197,94,.25); }
-    .result-row.err { border-color: rgba(239,68,68,.25); }
-    .result-top { display: flex; align-items: center; justify-content: space-between; padding: .8rem 1rem; cursor: pointer; transition: background .15s; background: var(--bg3); }
-    .result-top:hover { background: var(--bg2); }
-    .result-left { display: flex; align-items: center; gap: .6rem; min-width: 0; flex: 1; }
-    .rname { font-size: .83rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .result-right { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; margin-left: .75rem; }
-    .rec-badge { font-size: .7rem; color: var(--muted); background: var(--bg2); padding: .15rem .5rem; border-radius: 6px; font-family: 'DM Mono', monospace; }
-    .save-btn { background: var(--purchase-from); color: #000; border: none; padding: .3rem .7rem; border-radius: 7px; font-size: .75rem; font-weight: 700; cursor: pointer; transition: all .15s; }
-    .save-btn:hover { background: var(--purchase-to); color: #fff; transform: translateY(-1px); }
-    .fail-badge { font-size: .72rem; color: var(--danger); font-weight: 600; font-family: 'DM Mono', monospace; }
-    .chevron { font-size: .7rem; color: var(--muted); transition: transform .2s; }
-    .chevron.open { transform: rotate(180deg); }
-    .result-detail { display: none; padding: .9rem 1rem; border-top: 1px solid var(--border); background: var(--bg2); font-size: .8rem; }
-    .result-detail.open { display: block; }
-    .detail-stats { display: grid; grid-template-columns: repeat(2,1fr); gap: .5rem; margin-bottom: .75rem; }
-    @media(min-width:640px) { .detail-stats { grid-template-columns: repeat(4,1fr); } }
-    .ds-label { color: var(--muted); font-size: .7rem; }
-    .ds-val { font-weight: 700; font-family: 'DM Mono', monospace; font-size: .82rem; }
-    .tax-row { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .75rem; }
-    .tax-pill { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: .3rem .65rem; font-size: .72rem; }
-    .tax-pill span { font-weight: 700; color: var(--purchase-from); font-family: 'DM Mono', monospace; }
-    .sheet-badges { display: flex; flex-wrap: wrap; gap: .35rem; margin-bottom: .75rem; }
-    .sh-badge { padding: .18rem .55rem; border-radius: 20px; font-size: .7rem; font-weight: 700; font-family: 'DM Mono', monospace; }
-    .sh-b2b  { background: rgba(99,102,241,.2); color: #818cf8; }
-    .sh-cdnr { background: rgba(239,68,68,.15); color: #fca5a5; }
-    .sh-b2bc { background: rgba(6,182,212,.15); color: var(--purchase-from); }
-    .error-msg { color: var(--danger); font-weight: 500; }
-
-    /* ── CLEAR ALL BTN ── */
-    .clear-all-wrap { display: flex; justify-content: flex-end; margin-top: .6rem; }
-    .clear-all-btn { background: none; border: 1px solid rgba(239,68,68,.3); border-radius: 8px; color: var(--danger); padding: .3rem .8rem; cursor: pointer; font-size: .75rem; transition: all .2s; }
-    .clear-all-btn:hover { background: rgba(239,68,68,.1); }
-
-    @keyframes fadeDown { from { opacity:0; transform:translateY(-16px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes fadeIn   { from { opacity:0; transform:scale(.95); } to { opacity:1; transform:scale(1); } }
-
-    @media(max-width: 640px) {
-      .masthead-logo { font-size: 1.9rem; }
-      .tab-btn { font-size: .88rem; padding: .7rem .75rem; }
-      .tab-pill { display: none; }
-      .format-grid { grid-template-columns: 1fr; }
-      .stats-grid { grid-template-columns: repeat(3,1fr); }
-    }
-  </style>
+/* Btn + status */
+.btn{background:linear-gradient(135deg,var(--P),var(--PD));color:#fff;border:none;padding:.9rem 2.5rem;font-size:1rem;font-weight:700;border-radius:12px;cursor:pointer;transition:all .3s;box-shadow:var(--sh);font-family:"Space Mono",monospace;text-transform:uppercase;letter-spacing:1px}
+.btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:var(--shl)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btns{text-align:center;margin-top:1.8rem}
+.stat{margin-top:1.1rem;padding:.85rem 1rem;border-radius:9px;display:none;font-weight:500;font-size:.92rem}
+.stat.ok{background:rgba(16,185,129,.09);border:2px solid var(--S);color:var(--S);display:block}
+.stat.er{background:rgba(239,68,68,.09);border:2px solid var(--E);color:var(--E);display:block}
+.stat.in{background:rgba(37,99,235,.07);border:2px solid var(--P);color:var(--P);display:block}
+.pbar{width:100%;height:7px;background:var(--br);border-radius:10px;overflow:hidden;margin-top:.9rem;display:none}
+.pbar.on{display:block}
+.pfil{height:100%;background:linear-gradient(90deg,var(--P),var(--S));width:0%;transition:width .3s;border-radius:10px}
+hr.div{border:none;border-top:1px solid var(--br);margin:1.8rem 0}
+@media(max-width:640px){body{padding:1rem}.card{padding:1.5rem}.ftabs{flex-direction:column}}
+</style>
 </head>
 <body>
-<div class="container">
-
-  <div class="masthead">
-    <div class="masthead-logo">⚡ GST Suite</div>
-    <div class="masthead-sub">All-in-one GST data processor for Sales & Purchase</div>
-    <div class="masthead-tag">GSTR-1 · GSTR-2A · GSTR-2B</div>
+<div class="wrap">
+  <div class="hdr">
+    <h1>&#128202; GSTR1 Processor – FAB SAL</h1>
+    <p>Combines Portal CSV &bull; Tally CSV &bull; FAB Excel into one output</p>
+    <div class="badges">
+      <span class="bdg">&#128203; Portal CSV</span>
+      <span class="bdg">&#128188; Tally CSV</span>
+      <span class="bdg">&#128209; FAB SAL Excel</span>
+      <span class="bdg">&#128279; Auto-Combine</span>
+    </div>
   </div>
 
-  <div class="tab-switcher">
-    <button class="tab-btn active-sales" id="salesTab" onclick="switchTab('sales')">
-      📤 GSTR-1 Sales <span class="tab-pill">CSV → XLSX</span>
-    </button>
-    <button class="tab-btn" id="purchaseTab" onclick="switchTab('purchase')">
-      📥 GSTR-2A/2B Purchase <span class="tab-pill">XLSX → XLSX</span>
-    </button>
+  <div class="card">
+    <!-- STEP 1 -->
+    <div class="step">
+      <div class="sth"><div class="sn">1</div><div class="stl">Upload Files <span class="sub">(CSV from portal / Tally OR FAB SAL .xlsx — mix freely)</span></div></div>
+      <div class="upz" id="upz" onclick="document.getElementById('fi').click()">
+        <div class="upi">&#128193;</div>
+        <div class="upt">Click or drag files here</div>
+        <div class="uph">Accepts: Portal CSVs &bull; Tally CSVs &bull; FAB SAL Excel (.xlsx) &bull; Multiple files of same type auto-combine</div>
+      </div>
+      <input type="file" id="fi" accept=".csv,.xlsx" multiple />
+      <div id="grpCon"></div>
+    </div>
+
+    <hr class="div">
+
+    <!-- STEP 2 -->
+    <div class="step">
+      <div class="sth"><div class="sn">2</div><div class="stl">Process &amp; Download</div></div>
+      <div class="btns">
+        <button class="btn" id="goBtn" disabled onclick="process()">&#128640; Process &amp; Download</button>
+      </div>
+      <div class="pbar" id="pb"><div class="pfil" id="pf"></div></div>
+      <div class="stat" id="stat"></div>
+    </div>
   </div>
-
-  <!-- ════ SALES PANEL ════ -->
-  <div class="panel active" id="salesPanel">
-
-    <!-- Step 0: Template Upload -->
-    <div class="card" id="templateCard">
-      <div class="step-header">
-        <div class="step-num sales-num">1</div>
-        <div class="step-title">Upload GSTR-1 Template (FAB_SAL.xlsx)</div>
-      </div>
-      <div class="upload-zone" id="templateZone" onclick="document.getElementById('templateInput').click()">
-        <span class="upload-icon">📂</span>
-        <div class="upload-text" id="templateZoneText">Click to upload your template .xlsx file</div>
-        <div class="upload-hint">FAB_SAL.xlsx — the formatted Excel template with sheet headers</div>
-      </div>
-      <input type="file" id="templateInput" accept=".xlsx,.xls" />
-      <div class="status-bar" id="templateStatus"></div>
-    </div>
-
-    <!-- Step 2: Format -->
-    <div class="card">
-      <div class="step-header">
-        <div class="step-num sales-num">2</div>
-        <div class="step-title">Select Input Format</div>
-      </div>
-      <div class="format-grid">
-        <div class="fmt-option active" id="stdFmt" onclick="selectFmt('standard')">
-          <div class="fmt-icon">📋</div>
-          <div class="fmt-name">Standard Format</div>
-          <div class="fmt-desc">Single period GSTR-1 CSV files</div>
-        </div>
-        <div class="fmt-option" id="tallyFmt" onclick="selectFmt('tally')">
-          <div class="fmt-icon">💼</div>
-          <div class="fmt-name">Tally Excel</div>
-          <div class="fmt-desc">Tally exported CSV files</div>
-        </div>
-        <div class="fmt-option multi-opt" id="multiFmt" onclick="selectFmt('multiple')">
-          <span class="multi-badge">NEW</span>
-          <div class="fmt-icon">🗂️</div>
-          <div class="fmt-name">Multiple Periods</div>
-          <div class="fmt-desc">Merge N sets → one Excel</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Step 2: Upload -->
-    <div class="card">
-      <div class="step-header">
-        <div class="step-num sales-num">3</div>
-        <div class="step-title">Upload CSV Files</div>
-      </div>
-
-      <!-- Multi mode banner -->
-      <div class="multi-mode-banner" id="multiBanner">
-        <span class="multi-badge-pill">🗂️ MULTI MODE</span>
-        <div class="multi-mode-text">
-          Upload CSVs from <strong>multiple months/periods</strong> — all will be merged into a single Excel output. Same file types (B2B, B2CS…) stack automatically.
-        </div>
-      </div>
-
-      <!-- Batch counter (multi mode) -->
-      <div class="batch-counter" id="batchCounter" style="display:none"></div>
-
-      <div class="upload-zone" id="csvZone" onclick="document.getElementById('csvInput').click()">
-        <span class="upload-icon">📁</span>
-        <div class="upload-text" id="uploadZoneText">Click or drag your CSV files here</div>
-        <div class="upload-hint" id="uploadZoneHint">B2B · B2CL · B2CS · HSN · CDNR · EXP · DOC · etc.</div>
-      </div>
-      <input type="file" id="csvInput" accept=".csv" multiple />
-
-      <!-- File list -->
-      <div class="file-list" id="csvList"></div>
-
-      <!-- Clear all (multi) -->
-      <div class="clear-all-wrap" id="clearAllWrap" style="display:none">
-        <button class="clear-all-btn" onclick="clearAllFiles()">🗑 Clear All Files</button>
-      </div>
-
-      <!-- Merge summary (multi mode) -->
-      <div class="merge-summary" id="mergeSummary"></div>
-    </div>
-
-    <!-- Step 3: Process -->
-    <div class="card">
-      <div class="step-header">
-        <div class="step-num sales-num">4</div>
-        <div class="step-title">Process &amp; Download</div>
-      </div>
-      <button class="action-btn sales-btn" id="salesBtn" disabled onclick="mergeSales()">
-        🚀 Process &amp; Download Excel
-      </button>
-      <div class="progress-wrap" id="salesProgress">
-        <div class="progress-fill sales-fill" id="salesFill"></div>
-      </div>
-      <div class="status-bar" id="salesStatus"></div>
-    </div>
-
-  </div><!-- /salesPanel -->
-
-
-  <!-- ════ PURCHASE PANEL ════ -->
-  <div class="panel" id="purchasePanel">
-
-    <div class="card" id="pUploadCard">
-      <div class="step-header">
-        <div class="step-num purchase-num">1</div>
-        <div class="step-title">Upload GSTR-2A / 2B Excel Files</div>
-      </div>
-      <div class="upload-zone purchase" id="pZone" onclick="document.getElementById('pInput').click()">
-        <span class="upload-icon">📗</span>
-        <div class="upload-text">Click or drag GSTR-2A / 2B files here</div>
-        <div class="upload-hint">.xlsx / .xls — B2B · CDNR · B2B-CDNR sheets auto-detected</div>
-      </div>
-      <input type="file" id="pInput" accept=".xlsx,.xls" multiple />
-      <div class="file-list" id="pFileList"></div>
-    </div>
-
-    <div class="card" id="pProcessCard">
-      <div class="step-header">
-        <div class="step-num purchase-num">2</div>
-        <div class="step-title">Convert &amp; Download</div>
-      </div>
-      <button class="action-btn purchase-btn" id="purchaseBtn" disabled onclick="startPurchase()">
-        🚀 Process All Files
-      </button>
-    </div>
-
-    <div class="processing-bar" id="pProcessing">
-      <div class="spinner"></div>
-      <div>
-        <div class="proc-text" id="pProcText">Processing…</div>
-        <div class="proc-sub" id="pProcSub">Please wait</div>
-      </div>
-    </div>
-
-    <div class="summary-box" id="pSummary">
-      <div class="summary-header">
-        <div class="summary-title">✅ All Done!</div>
-        <button class="reset-btn" onclick="resetPurchase()">✕ Start Over</button>
-      </div>
-      <div class="stats-grid" id="pStats"></div>
-      <button class="dl-all-btn" id="dlAllBtn" onclick="downloadAllPurchase()">⬇ Download All Files</button>
-    </div>
-
-    <div class="card" id="pResultsCard" style="display:none">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
-        <span style="font-family:'Syne',sans-serif;font-weight:700">File Results</span>
-        <span id="pResultsCount" style="font-family:'DM Mono',monospace;font-size:.75rem;background:rgba(6,182,212,.12);color:var(--purchase-from);padding:.2rem .6rem;border-radius:20px;">0 processed</span>
-      </div>
-      <div class="results-wrap" id="pResultsList"></div>
-    </div>
-
-  </div><!-- /purchasePanel -->
-</div><!-- /container -->
+</div>
 
 <script>
-// ══════════════════════════════════════════════════════
-//  TAB SWITCHING
-// ══════════════════════════════════════════════════════
-function switchTab(tab) {
-  document.getElementById('salesPanel').classList.toggle('active', tab === 'sales');
-  document.getElementById('purchasePanel').classList.toggle('active', tab === 'purchase');
-  document.getElementById('salesTab').className    = 'tab-btn' + (tab === 'sales'    ? ' active-sales'    : '');
-  document.getElementById('purchaseTab').className = 'tab-btn' + (tab === 'purchase' ? ' active-purchase' : '');
-}
+const TMPL = "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";
 
-// ══════════════════════════════════════════════════════
-//  SALES STATE
-// ══════════════════════════════════════════════════════
-// Standard/Tally mode: salesCsvFiles = { 'B2B.CSV': File, ... }
-// Multiple mode:       salesFileArray = [ {file: File, batch: 1, id: uniqueId}, ... ]
-
-let salesCsvFiles  = {};   // standard / tally
-let salesFileArray = [];   // multiple mode
-let salesFormat    = 'standard';
-let batchNumber    = 1;    // current batch counter for multi mode
-let nextFileId     = 0;    // unique id per file in array
-
-// ══════════════════════════════════════════════════════
-//  FORMAT SELECTOR
-// ══════════════════════════════════════════════════════
-function selectFmt(fmt) {
-  salesFormat = fmt;
-  document.getElementById('stdFmt').classList.toggle('active', fmt === 'standard');
-  document.getElementById('tallyFmt').classList.toggle('active', fmt === 'tally');
-  document.getElementById('multiFmt').classList.toggle('active', fmt === 'multiple');
-
-  const isMulti   = fmt === 'multiple';
-  const zone      = document.getElementById('csvZone');
-  const banner    = document.getElementById('multiBanner');
-  const btn       = document.getElementById('salesBtn');
-
-  // Toggle multi mode UI
-  banner.classList.toggle('show', isMulti);
-  zone.classList.toggle('multi-zone', isMulti);
-  document.getElementById('uploadZoneText').textContent = isMulti
-    ? 'Click or drag CSV files here (any period)'
-    : 'Click or drag your CSV files here';
-  document.getElementById('uploadZoneHint').textContent = isMulti
-    ? 'Upload CSVs from multiple months — add as many batches as needed'
-    : 'B2B · B2CL · B2CS · HSN · CDNR · EXP · DOC · etc.';
-
-  // Update process button style
-  btn.className = 'action-btn ' + (isMulti ? 'multi-btn' : 'sales-btn');
-
-  // Reset file state on mode switch
-  salesCsvFiles  = {};
-  salesFileArray = [];
-  batchNumber    = 1;
-  nextFileId     = 0;
-  renderCsvList();
-  btn.disabled = true;
-}
-
-// ══════════════════════════════════════════════════════
-//  DRAG-DROP & FILE INPUT (Sales)
-// ══════════════════════════════════════════════════════
-const csvZone = document.getElementById('csvZone');
-['dragenter','dragover','dragleave','drop'].forEach(ev =>
-  csvZone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); })
-);
-['dragenter','dragover'].forEach(ev => csvZone.addEventListener(ev, () => csvZone.classList.add('dragover')));
-['dragleave','drop'].forEach(ev => csvZone.addEventListener(ev, () => csvZone.classList.remove('dragover')));
-csvZone.addEventListener('drop', e => {
-  const files = Array.from(e.dataTransfer.files).filter(f => f.name.toLowerCase().endsWith('.csv'));
-  handleDroppedFiles(files);
-});
-document.getElementById('csvInput').addEventListener('change', function() {
-  const files = Array.from(this.files).filter(f => f.name.toLowerCase().endsWith('.csv'));
-  handleDroppedFiles(files);
-  this.value = '';
-});
-
-function handleDroppedFiles(files) {
-  if (!files.length) return;
-  if (salesFormat === 'multiple') {
-    handleMultiFiles(files);
-  } else {
-    handleSingleModeFiles(files);
-  }
-}
-
-// ── Standard / Tally mode ──
-function handleSingleModeFiles(files) {
-  files.forEach(f => {
-    salesCsvFiles[f.name.toUpperCase()] = f;
-  });
-  renderCsvList();
-  document.getElementById('salesBtn').disabled = !Object.keys(salesCsvFiles).length;
-}
-
-function removeSalesCsv(name) {
-  delete salesCsvFiles[name];
-  renderCsvList();
-  document.getElementById('salesBtn').disabled = !Object.keys(salesCsvFiles).length;
-}
-
-// ── Multiple mode ──
-function handleMultiFiles(files) {
-  const currentBatch = batchNumber;
-  files.forEach(f => {
-    salesFileArray.push({ file: f, batch: currentBatch, id: nextFileId++ });
-  });
-  // Auto-increment batch for next upload
-  batchNumber++;
-  renderCsvList();
-  document.getElementById('salesBtn').disabled = !salesFileArray.length;
-}
-
-function removeMultiFile(id) {
-  salesFileArray = salesFileArray.filter(item => item.id !== id);
-  // Re-number batches to keep them clean
-  const batchMap = {};
-  let counter = 1;
-  salesFileArray.forEach(item => {
-    if (!(item.batch in batchMap)) batchMap[item.batch] = counter++;
-    item._displayBatch = batchMap[item.batch];
-  });
-  renderCsvList();
-  document.getElementById('salesBtn').disabled = !salesFileArray.length;
-}
-
-function clearAllFiles() {
-  if (salesFormat === 'multiple') {
-    salesFileArray = [];
-    batchNumber    = 1;
-    nextFileId     = 0;
-  } else {
-    salesCsvFiles = {};
-  }
-  renderCsvList();
-  document.getElementById('salesBtn').disabled = true;
-}
-
-// ══════════════════════════════════════════════════════
-//  RENDER FILE LIST
-// ══════════════════════════════════════════════════════
-function renderCsvList() {
-  const listEl         = document.getElementById('csvList');
-  const clearWrap      = document.getElementById('clearAllWrap');
-  const batchCounter   = document.getElementById('batchCounter');
-  const mergeSummary   = document.getElementById('mergeSummary');
-
-  if (salesFormat === 'multiple') {
-    // ─ Multi mode ─
-    if (!salesFileArray.length) {
-      listEl.innerHTML    = '';
-      clearWrap.style.display   = 'none';
-      batchCounter.style.display = 'none';
-      mergeSummary.classList.remove('show');
-      return;
-    }
-
-    // Build batch → files map
-    const batchGroups = {};
-    salesFileArray.forEach(item => {
-      if (!batchGroups[item.batch]) batchGroups[item.batch] = [];
-      batchGroups[item.batch].push(item);
-    });
-
-    // Render batch counter pills
-    batchCounter.style.display = 'flex';
-    batchCounter.innerHTML = Object.keys(batchGroups).map(b => {
-      const cnt = batchGroups[b].length;
-      return `<span class="batch-tag">📦 Batch ${b} <span style="opacity:.6">(${cnt} file${cnt>1?'s':''})</span></span>`;
-    }).join('');
-
-    // Render file items grouped by batch
-    let html = '';
-    Object.keys(batchGroups).forEach(b => {
-      const items = batchGroups[b];
-      html += `<div class="file-group-label">📦 Batch ${b} — ${items.length} file${items.length>1?'s':''}</div>`;
-      items.forEach(item => {
-        html += `
-          <div class="file-item multi-item">
-            <span class="file-icon">📊</span>
-            <div class="file-info">
-              <div class="file-name" title="${item.file.name}">${item.file.name}</div>
-              <div class="file-size">${fmtSz(item.file.size)}</div>
-              <div class="file-batch-dot">Batch ${b} · ${getSheetName(item.file.name.toUpperCase()) || 'unknown'}</div>
-            </div>
-            <button class="remove-btn" onclick="removeMultiFile(${item.id})">✕</button>
-          </div>`;
-      });
-    });
-    listEl.innerHTML = html;
-    clearWrap.style.display = 'flex';
-
-    // Build merge summary
-    const sheetCounts = {};
-    salesFileArray.forEach(item => {
-      const s = getSheetName(item.file.name.toUpperCase());
-      if (s) sheetCounts[s] = (sheetCounts[s] || 0) + 1;
-    });
-    const pillsHtml = Object.entries(sheetCounts).map(([s, c]) =>
-      `<div class="merge-pill"><span class="merge-pill-count">${c}×</span><span class="merge-pill-label">${s.toUpperCase()}</span></div>`
-    ).join('');
-    const totalBatches = Object.keys(batchGroups).length;
-    mergeSummary.innerHTML = `
-      <span style="font-size:.8rem;color:var(--muted);margin-right:.25rem;">Merging:</span>
-      ${pillsHtml}
-      <span style="margin-left:auto;font-size:.75rem;color:#c4b5fd;font-family:'DM Mono',monospace;">
-        ${salesFileArray.length} files · ${totalBatches} batch${totalBatches>1?'es':''}
-      </span>`;
-    mergeSummary.classList.add('show');
-
-  } else {
-    // ─ Standard / Tally mode ─
-    batchCounter.style.display   = 'none';
-    mergeSummary.classList.remove('show');
-    clearWrap.style.display       = 'none';
-
-    const keys = Object.keys(salesCsvFiles);
-    if (!keys.length) { listEl.innerHTML = ''; return; }
-    listEl.innerHTML = keys.map(n => `
-      <div class="file-item">
-        <span class="file-icon">📊</span>
-        <div class="file-info">
-          <div class="file-name">${n}</div>
-          <div class="file-size">${fmtSz(salesCsvFiles[n].size)}</div>
-        </div>
-        <button class="remove-btn" onclick="removeSalesCsv('${n}')">✕</button>
-      </div>`).join('');
-    clearWrap.style.display = keys.length > 1 ? 'flex' : 'none';
-  }
-}
-
-function fmtSz(b) {
-  if (b<1024) return b+' B'; if (b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(1)+' MB';
-}
-
-// ══════════════════════════════════════════════════════
-//  STATUS / PROGRESS
-// ══════════════════════════════════════════════════════
-function showSalesStatus(msg, type) {
-  const el = document.getElementById('salesStatus');
-  el.textContent = msg;
-  el.className = `status-bar show ${type}`;
-}
-function setSalesProgress(p) {
-  document.getElementById('salesProgress').classList.add('show');
-  document.getElementById('salesFill').style.width = p + '%';
-  // Update fill class based on mode
-  const fill = document.getElementById('salesFill');
-  fill.className = 'progress-fill ' + (salesFormat === 'multiple' ? 'multi-fill' : 'sales-fill');
-}
-function hideSalesProgress() {
-  document.getElementById('salesProgress').classList.remove('show');
-  document.getElementById('salesFill').style.width = '0%';
-}
-
-// ══════════════════════════════════════════════════════
-//  FIELD MAPPINGS (unchanged from original)
-// ══════════════════════════════════════════════════════
-const columnMappings = {
-  'b2b':{'GSTIN/UIN of Recipient':'GSTIN/UIN','Invoice Number':'Invoice No','Invoice date':'Date of Invoice','Invoice Value':'Invoice Value','Rate':'GST%','Taxable Value':'Taxable Value','Cess Amount':'CESS','Place Of Supply':'Place Of Supply','Reverse Charge':'RCM Applicable','Invoice Type':'Invoice Type','E-Commerce GSTIN':'E-Commerce GSTIN'},
-  'b2cl':{'Invoice Number':'Invoice No','Invoice date':'Date of Invoice','Invoice Value':'Invoice Value','Place Of Supply':'Place Of Supply','Rate':'GST%','Taxable Value':'Taxable Value','Cess Amount':'CESS','E-Commerce GSTIN':'E-Commerce GSTIN'},
-  'b2cs':{'Type':'Type','Place Of Supply':'Place Of Supply','Rate':'GST%','Taxable Value':'Taxable Value','Cess Amount':'CESS','E-Commerce GSTIN':'E-Commerce GSTIN'},
-  'export':{'Export Type':'Export Type','Invoice Number':'Invoice No','Invoice date':'Date of Invoice','Invoice Value':'Invoice Value','Port Code':'Port Code','Shipping Bill Number':'Shipping Bill No','Shipping Bill Date':'Shipping Bill Date','Rate':'GST%','Taxable Value':'Taxable Value'},
-  'exemp':{'Description':'Description','Nil Rated Supplies':'Nil Rated Supplies','Exempted (other than nil rated/non GST supply)':'Exempted(other than nil rated/non GST supply)','Non-GST supplies':'Non-GST Supplies'},
-  'cdnr':{'GSTIN/UIN of Recipient':'GSTIN/UIN','Note Number':'Dr./ Cr. No.','Note Date':'Dr./Cr. Date','Note Type':'Type of note                (Dr/ Cr)','Place Of Supply':'Place of supply','Reverse Charge':'RCM','Note Supply Type':'Invoice Type','Note Value':'Dr./Cr. Value','Rate':'GST%','Taxable Value':'Taxable Value','Cess Amount':'CESS'},
-  'cdnur':{'UR Type':'Supply Type','Note/Refund Voucher Number':'Dr./ Cr. Note No.','Note/Refund Voucher date':'Dr./ Cr. Note Date','Document Type':'Type of note (Dr./ Cr.)','Place Of Supply':'Place of supply','Note/Refund Voucher Value':'Dr./Cr. Note Value','Rate':'GST%','Taxable Value':'Taxable Value','Cess Amount':'CESS'},
-  'adv_tax':{'Place Of Supply':'Place Of Supply','Rate':'GST%','Gross Advance Received':'Gross Advance Received','Cess Amount':'CESS'},
-  'adv_tax_adjusted':{'Place Of Supply':'Place Of Supply','Rate':'GST%','Gross Advance Adjusted':'Gross Advance Adjusted','Cess Amount':'CESS'},
-  'docs':{'Nature of Document':['Nature of Document','Type of Document'],'Sr.No.From':['Sr.No.From','Sr. No. From','Series From'],'Sr.No.To':['Sr.No.To','Sr. No. To','Series To'],'Total Number':['Total Number'],'Cancelled':['Cancelled'],'Net Issued':['Net Issued']},
-  'HSN(B2B)':{'Type':'Type','HSN':'HSN','Description':'Description','UQC':'UQC','Total Quantity':'Total Quantity','Total Value':'Total Value','Rate':'Rate','Taxable Value':'Total Taxable Value','Integrated Tax Amount':'IGST','Central Tax Amount':'CGST','State/UT Tax Amount':'SGST','Cess Amount':'CESS'},
-  'HSN(B2C)':{'Type':'Type','HSN':'HSN','Description':'Description','UQC':'UQC','Total Quantity':'Total Quantity','Total Value':'Total Value','Rate':'Rate','Taxable Value':'Total Taxable Value','Integrated Tax Amount':'IGST','Central Tax Amount':'CGST','State/UT Tax Amount':'SGST','Cess Amount':'CESS'}
+// ── Sheet config: name → header row (0-indexed), data starts at header+1
+const SHEETS = {
+  b2b:       { hrow: 3 },   // row 4 = index 3
+  b2cl:      { hrow: 3 },
+  b2cs:      { hrow: 3 },
+  "HSN(B2B)":{ hrow: 0 },   // row 1 = index 0
+  "HSN(B2C)":{ hrow: 0 },
+  docs:      { hrow: 3 },
+  exemp:     { hrow: 3 },
+  cdnr:      { hrow: 3 }
 };
 
-function getSheetName(fn) {
-  // Maps CSV filename patterns → actual sheet names in FAB_SAL.xlsx template
-  // Template sheets: b2b, b2cl, b2cs, HSN(B2B), HSN(B2C), docs, exemp, cdnr
-  const u = fn.toUpperCase();
-  if (u.includes('HSN') && u.includes('B2C')) return 'HSN(B2C)';
-  if (u.includes('HSN'))                       return 'HSN(B2B)';
-  if (u.includes('B2CL'))                      return 'b2cl';
-  if (u.includes('B2CS'))                      return 'b2cs';
-  if (u.includes('B2B'))                       return 'b2b';
-  if (u.includes('EXEMP'))                     return 'exemp';
-  if (u.includes('CDNR') && !u.includes('CDNUR')) return 'cdnr';
-  if (u.includes('DOC'))                       return 'docs';
-  // EXP, CDNUR, AT, ATADJ — not in template, skip
+// ── File → sheet mapping
+function sheetOf(fname) {
+  const u = fname.toUpperCase();
+  if (u.includes("HSN") && u.includes("B2B")) return "HSN(B2B)";
+  if (u.includes("HSN") && u.includes("B2C")) return "HSN(B2C)";
+  if (u.includes("HSN"))  return "HSN(B2B)";      // fallback
+  if (u.includes("B2CL")) return "b2cl";
+  if (u.includes("B2CS")) return "b2cs";
+  if (u.includes("B2B"))  return "b2b";
+  if (u.includes("CDNUR"))return null;             // not in template
+  if (u.includes("CDNR")) return "cdnr";
+  if (u.includes("EXEMP"))return "exemp";
+  if (u.includes("EXP"))  return null;             // not in template
+  if (u.includes("ATADJ"))return null;             // not in template
+  if (u.includes("AT"))   return null;             // not in template
+  if (u.includes("DOC"))  return "docs";
   return null;
 }
 
-function cleanPlaceOfSupply(v) { return v ? v.toString().trim().replace(/^\d+-\s*/,'').trim() : ''; }
-function trimAll(obj) { const c={}; for(const[k,v] of Object.entries(obj)) c[k]=typeof v==='string'?v.trim():v; return c; }
+const SHEET_LBL = {
+  b2b:"B2B Invoices", b2cl:"B2CL (Large)", b2cs:"B2CS (Small)",
+  "HSN(B2B)":"HSN – B2B", "HSN(B2C)":"HSN – B2C",
+  docs:"Documents Issued", exemp:"Nil / Exempt / Non-GST", cdnr:"CDNR Credit/Debit"
+};
 
-function parseCSVText(text) {
-  const lines = text.trim().split(/\r?\n/);
-  if (lines.length <= 1) return [];
-  function parseLine(line) {
-    const res=[]; let cur='',inQ=false;
-    for (let i=0;i<line.length;i++) {
-      if (line[i]==='"'){inQ=!inQ;} else if(line[i]===','&&!inQ){res.push(cur.trim());cur='';}else{cur+=line[i];}
-    }
-    res.push(cur.trim()); return res;
+// ── Column mappings: templateHeader → [possible CSV column names in priority order]
+// Template headers (exact, from FAB SAL row4/row1):
+const COL = {
+  b2b: {
+    "GSTIN/UIN of Recipient": ["GSTIN/UIN of Recipient"],
+    "Receiver Name":          ["Receiver Name"],
+    "Invoice Number":         ["Invoice Number"],
+    "Invoice date":           ["Invoice date"],
+    "Invoice Value":          ["Invoice Value"],
+    "Place Of Supply":        ["Place Of Supply"],
+    "Invoice Type":           ["Invoice Type"],
+    "Reverse Charge":         ["Reverse Charge"],
+    "E-Commerce GSTIN":       ["E-Commerce GSTIN"],
+    "Rate":                   ["Rate"],
+    "Taxable Value":          ["Taxable Value"],
+    "Cess Amount":            ["Cess Amount"]
+  },
+  b2cl: {
+    "Invoice Number":  ["Invoice Number"],
+    "Invoice date":    ["Invoice date"],
+    "Invoice Value":   ["Invoice Value"],
+    "Place Of Supply": ["Place Of Supply"],
+    "Rate":            ["Rate"],
+    "Taxable Value":   ["Taxable Value"],
+    "Cess Amount":     ["Cess Amount"],
+    "E-Commerce GSTIN":["E-Commerce GSTIN"]
+  },
+  b2cs: {
+    "Type":            ["Type"],
+    "Place Of Supply": ["Place Of Supply"],
+    "Rate":            ["Rate"],
+    "Taxable Value":   ["Taxable Value"],
+    "Cess Amount":     ["Cess Amount"],
+    "E-Commerce GSTIN":["E-Commerce GSTIN"]
+  },
+  "HSN(B2B)": {
+    "HSN":                    ["HSN"],
+    "Description":            ["Description"],
+    "UQC":                    ["UQC"],
+    "Total Quantity":         ["Total Quantity"],
+    "Total Value":            ["Total Value"],
+    "Rate":                   ["Rate"],
+    "Taxable Value":          ["Taxable Value"],
+    "Integrated Tax Amount":  ["Integrated Tax Amount"],
+    "Central Tax Amountt":    ["Central Tax Amount","Central Tax Amountt"],
+    "State Tax Amount":       ["State/UT Tax Amount","State Tax Amount"],
+    "Cess Amount":            ["Cess Amount"]
+  },
+  "HSN(B2C)": {
+    "HSN":                    ["HSN"],
+    "Description":            ["Description"],
+    "UQC":                    ["UQC"],
+    "Total Quantity":         ["Total Quantity"],
+    "Total Value":            ["Total Value"],
+    "Rate":                   ["Rate"],
+    "Taxable Value":          ["Taxable Value"],
+    "Integrated Tax Amount":  ["Integrated Tax Amount"],
+    "Central Tax Amountt":    ["Central Tax Amount","Central Tax Amountt"],
+    "State Tax Amount":       ["State/UT Tax Amount","State Tax Amount"],
+    "Cess Amount":            ["Cess Amount"]
+  },
+  docs: {
+    "Nature of Document": ["Nature of Document"],
+    "Sr.No.From":         ["Sr.No.From"],
+    "Sr.No.To":           ["Sr.No.To"],
+    "Total Number":       ["Total Number"],
+    "Cancelled":          ["Cancelled"]
+  },
+  exemp: {
+    "Description":                               ["Description"],
+    "Nil Rated Supplies":                        ["Nil Rated Supplies"],
+    "Exempted(other than nil rated/non GST supply)": ["Exempted (other than nil rated/non GST supply)","Exempted(other than nil rated/non GST supply)"],
+    "Non-GST Supplies":                          ["Non-GST supplies","Non-GST Supplies"]
+  },
+  cdnr: {
+    "GSTIN/UIN of Recipient":        ["GSTIN/UIN of Recipient"],
+    "Receiver Name":                 ["Receiver Name"],
+    "Invoice/Advance Receipt Number":["Invoice/Advance Receipt Number","Note Number"],
+    "Invoice/Advance Receipt date":  ["Invoice/Advance Receipt date","Note Date"],
+    "Note/Refund Voucher Number":    ["Note/Refund Voucher Number","Note Number"],
+    "Note/Refund Voucher date":      ["Note/Refund Voucher date","Note Date"],
+    "Document Type":                 ["Document Type","Note Type"],
+    "Place Of Supply":               ["Place Of Supply"],
+    "Note/Refund Voucher Value":     ["Note/Refund Voucher Value","Note Value"],
+    "Applicable % of Tax Rate":      ["Applicable % of Tax Rate"],
+    "Rate":                          ["Rate"],
+    "Taxable Value":                 ["Taxable Value"],
+    "Cess Amount":                   ["Cess Amount"],
+    "Pre GST":                       ["Pre GST"]
   }
-  const headers = parseLine(lines[0]);
-  const data = [];
-  for (let i=1;i<lines.length;i++) {
-    if (!lines[i].trim()) continue;
-    const vals = parseLine(lines[i]);
-    const row = {};
-    headers.forEach((h,idx) => { row[h] = vals[idx]||''; });
+};
+
+// ── File storage
+let files = {};   // key=filename, value=File obj
+
+// ── Drag & drop
+const upz = document.getElementById("upz");
+["dragenter","dragover","dragleave","drop"].forEach(e => upz.addEventListener(e, ev=>{ev.preventDefault();ev.stopPropagation();}));
+["dragenter","dragover"].forEach(e => upz.addEventListener(e, ()=>upz.classList.add("over")));
+["dragleave","drop"].forEach(e => upz.addEventListener(e, ()=>upz.classList.remove("over")));
+upz.addEventListener("drop", ev=>addFiles(ev.dataTransfer.files));
+document.getElementById("fi").addEventListener("change", ev=>{addFiles(ev.target.files);ev.target.value="";});
+
+function addFiles(list) {
+  Array.from(list).forEach(f=>{ files[f.name] = f; });
+  render(); updateBtn();
+}
+function rm(k){ delete files[k]; render(); updateBtn(); }
+
+function fmtType(fname) {
+  const u = fname.toUpperCase();
+  const isXlsx = u.endsWith(".XLSX") || u.endsWith(".XLS");
+  if (isXlsx) return "excel";
+  // Detect tally CSV by checking if it contains lowercase name patterns
+  // We'll detect at parse time; label based on extension here
+  return "csv";
+}
+
+function render() {
+  const c = document.getElementById("grpCon");
+  const keys = Object.keys(files);
+  if (!keys.length) { c.innerHTML=""; return; }
+
+  const groups={}, unrec=[];
+  keys.forEach(k=>{
+    const sn = sheetOf(k);
+    if (!sn) { unrec.push(k); return; }
+    if (!groups[sn]) groups[sn]=[];
+    groups[sn].push(k);
+  });
+
+  let h = "<div class=\"sgroups\">";
+  for (const [sn, ks] of Object.entries(groups)) {
+    const lbl = SHEET_LBL[sn]||sn;
+    const ctag = ks.length>1 ? `<span class="ctag">&#128279; ${ks.length} files – combine</span>` : "";
+    const chips = ks.map(k=>{
+      const t = fmtType(k);
+      const tag = t==="excel"
+        ? `<span class="xceltag">&#128209; Excel</span>`
+        : `<span class="fmttag">CSV</span>`;
+      return `<div class="chip">${tag}<span>${k}</span><span class="csz">${sz(files[k].size)}</span><button class="crm" onclick="rm(\`${k}\`)">&#215;</button></div>`;
+    }).join("");
+    h += `<div class="sgrp"><div class="sgh"><span class="sbdg">${sn}</span><span class="sgttl">${lbl}</span>${ctag}</div><div class="sgf">${chips}</div></div>`;
+  }
+  if (unrec.length) {
+    const chips = unrec.map(k=>`<div class="chip"><span>&#9888;&#65039;</span><span>${k}</span><span class="csz">${sz(files[k].size)}</span><button class="crm" onclick="rm(\`${k}\`)">&#215;</button></div>`).join("");
+    h += `<div class="unrec"><div class="urt">&#9888;&#65039; Not mapped to template (will skip): EXP, AT, ATADJ, CDNUR</div><div style="display:flex;flex-wrap:wrap;gap:.5rem">${chips}</div></div>`;
+  }
+  h += "</div>";
+  c.innerHTML = h;
+}
+
+function sz(b){ if(b<1024) return b+"B"; if(b<1048576) return (b/1024).toFixed(1)+"KB"; return (b/1048576).toFixed(1)+"MB"; }
+function updateBtn(){ document.getElementById("goBtn").disabled = !Object.keys(files).length; }
+
+// ── Helpers
+function trimAll(o){ const r={}; for(const[k,v] of Object.entries(o)) r[k]=typeof v==="string"?v.trim():v; return r; }
+function cleanPos(v){ return v?v.toString().trim().replace(/^\d+-\s*/,"").trim():""; }
+function readText(f){ return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(f);}); }
+function readBuf(f){ return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsArrayBuffer(f);}); }
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length<=1) return [];
+  function pl(line){
+    const res=[];let cur="",inQ=false;
+    for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'){inQ=!inQ;}else if(c===","&&!inQ){res.push(cur.trim());cur="";}else cur+=c;}
+    res.push(cur.trim());return res;
+  }
+  const hdrs = pl(lines[0]);
+  const data=[];
+  for(let i=1;i<lines.length;i++){
+    if(!lines[i].trim()) continue;
+    const v=pl(lines[i]);
+    const row={};hdrs.forEach((h,idx)=>{row[h]=v[idx]||"";});
     data.push(row);
   }
   return data;
 }
 
-function processDocsIssued(data) {
-  return data.map(row => {
-    const c = trimAll(row);
-    const tot = parseFloat(c['Total Number'])||0;
-    const can = parseFloat(c['Cancelled'])||0;
-    return {'Nature of Document':c['Nature of Document']||c['Type of Document']||'','Sr.No.From':c['Sr.No.From']||c['Sr. No. From']||c['Series From']||'','Sr.No.To':c['Sr.No.To']||c['Sr. No. To']||c['Series To']||'','Total Number':tot,'Cancelled':can,'Net Issued':tot-can};
-  });
-}
-
-function appendDataToSheet(sheet, data, mapping, sheetName) {
-  if (!data.length) return;
-  const range = XLSX.utils.decode_range(sheet['!ref']||'A1');
-  const tHeaders = [];
-  for (let c=range.s.c;c<=range.e.c;c++) {
-    const cell = sheet[XLSX.utils.encode_cell({r:0,c})];
-    tHeaders.push(cell&&cell.v?cell.v.toString().trim():'');
+// Read rows from an Excel sheet (FAB SAL format)
+// hrow = 0-indexed header row number
+function xlsxSheetToRows(ws, hrow) {
+  const range = XLSX.utils.decode_range(ws["!ref"]||"A1");
+  const headers=[];
+  for(let c=range.s.c;c<=range.e.c;c++){
+    const cell=ws[XLSX.utils.encode_cell({r:hrow,c})];
+    headers.push(cell&&cell.v!=null?cell.v.toString().trim():"");
   }
-  let startRow=1, lastRow=0;
-  for (let r=1;r<=range.e.r;r++) {
-    let has=false;
-    for (let c=range.s.c;c<=range.e.c;c++) {
-      const cell=sheet[XLSX.utils.encode_cell({r,c})];
-      if (cell&&cell.v!==undefined&&cell.v!==null&&cell.v!==''){has=true;break;}
-    }
-    if (has) lastRow=r;
-  }
-  if (lastRow>0) startRow=lastRow+1;
-
-  data.forEach((row,ri) => {
-    const eRow = startRow+ri;
-    tHeaders.forEach((th,ci) => {
-      if (!th) return;
-      let val='';
-      if (row[th]!==undefined) val=row[th];
-      else {
-        for (const [csvCol,excelCol] of Object.entries(mapping)) {
-          const cols=Array.isArray(excelCol)?excelCol:[excelCol];
-          if (cols.includes(th)&&row[csvCol]!==undefined){val=row[csvCol];break;}
-        }
-      }
-      const addr = XLSX.utils.encode_cell({r:eRow,c:ci});
-      if (!val&&val!==0){sheet[addr]={t:'s',v:''};return;}
-      let fin=val;
-      if (th.toLowerCase().includes('place of supply')) fin=cleanPlaceOfSupply(val);
-      if (th==='Invoice Type') fin=val.toString().replace(' B2B','').replace(' B2C','').trim();
-      if (th==='RCM Applicable'||th==='RCM') fin=val==='Y'?'Yes':val==='N'?'No':val;
-      if (th==='Rate'||th==='GST%') if(!val||val==='') fin=0;
-      if (th.toLowerCase().includes('date')) {
-        const dm=val.toString().match(/(\d{1,2})-([A-Za-z]{3})-(\d{2})/);
-        if (dm){const m={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};fin=`${dm[1].padStart(2,'0')}-${(m[dm[2]]+1).toString().padStart(2,'0')}-${2000+parseInt(dm[3])}`;}
-      }
-      const n=parseFloat(fin.toString().replace(/,/g,''));
-      if (!isNaN(n)&&fin.toString().match(/^-?\d+\.?\d*$/)) sheet[addr]={t:'n',v:n};
-      else sheet[addr]={t:'s',v:fin.toString().trim()};
+  const rows=[];
+  for(let r=hrow+1;r<=range.e.r;r++){
+    const row={};let hasData=false;
+    headers.forEach((h,ci)=>{
+      const cell=ws[XLSX.utils.encode_cell({r,c:range.s.c+ci})];
+      const v=cell&&cell.v!=null?cell.v.toString().trim():"";
+      row[h]=v;
+      if(v) hasData=true;
     });
-  });
-  range.e.r=startRow+data.length-1;
-  sheet['!ref']=XLSX.utils.encode_range(range);
+    if(hasData) rows.push(row);
+  }
+  return rows;
 }
 
-function updateExemptSheet(sheet, data, mapping) {
-  if (!data.length) return;
-  const range=XLSX.utils.decode_range(sheet['!ref']||'A1');
-  const tHeaders=[];
-  for (let c=range.s.c;c<=range.e.c;c++){const cell=sheet[XLSX.utils.encode_cell({r:0,c})];tHeaders.push(cell&&cell.v?cell.v.toString().trim():'');}
-  data.forEach(row=>{
-    const csvDesc=(row['Description']||'').toString().trim();
-    for (let r=1;r<=range.e.r;r++){
-      const dc=sheet[XLSX.utils.encode_cell({r,c:0})];
-      if (dc&&dc.v&&dc.v.toString().trim()===csvDesc){
-        tHeaders.forEach((th,ci)=>{
-          if(!th||ci===0)return;
-          let val='';
-          if(row[th]!==undefined)val=row[th];
-          else for(const[csvC,exC]of Object.entries(mapping)){const cols=Array.isArray(exC)?exC:[exC];if(cols.includes(th)&&row[csvC]!==undefined){val=row[csvC];break;}}
-          const addr=XLSX.utils.encode_cell({r,c:ci});
-          if(!val&&val!==0){sheet[addr]={t:'n',v:0};return;}
-          const n=parseFloat(val.toString().replace(/,/g,''));
-          if(!isNaN(n))sheet[addr]={t:'n',v:n};else sheet[addr]={t:'s',v:val.toString().trim()};
-        });
-        break;
+// Transform a single CSV row → template column values
+function mapRow(row, sheetName) {
+  const mapping = COL[sheetName];
+  if (!mapping) return null;
+  const out = {};
+  for (const [tmplCol, sources] of Object.entries(mapping)) {
+    let val = "";
+    for (const src of sources) {
+      if (row[src] !== undefined && row[src] !== "") { val = row[src]; break; }
+    }
+    // Transforms
+    if (tmplCol === "Place Of Supply") val = cleanPos(val);
+    if (tmplCol === "Invoice Type") val = val.replace(/ B2B$/,"").replace(/ B2C$/,"").trim();
+    if (tmplCol === "Reverse Charge") val = val==="Y"?"Yes":val==="N"?"No":val;
+    if (tmplCol === "Document Type") {
+      // Normalize note type codes
+      if (val==="C") val="Credit Note";
+      if (val==="D") val="Debit Note";
+    }
+    if ((tmplCol==="Rate")&&(val===""||val==null)) val="0";
+    // Date normalisation: 02-Feb-26 or 02-Feb-2026 → DD-MM-YYYY
+    if (tmplCol.toLowerCase().includes("date")&&val) {
+      const m=val.match(/(\d{1,2})-([A-Za-z]{3})-(\d{2,4})/);
+      if(m){const mo={Jan:"01",Feb:"02",Mar:"03",Apr:"04",May:"05",Jun:"06",Jul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12"};
+        const yr=m[3].length===2?"20"+m[3]:m[3];
+        val=m[1].padStart(2,"0")+"-"+mo[m[2]]+"-"+yr;
       }
     }
-  });
-}
-
-// ══════════════════════════════════════════════════════
-//  READ FILE AS TEXT (promise)
-// ══════════════════════════════════════════════════════
-function readFileText(file) {
-  return new Promise((res,rej) => {
-    const r = new FileReader();
-    r.onload = e => res(e.target.result);
-    r.onerror = rej;
-    r.readAsText(file);
-  });
-}
-
-// ══════════════════════════════════════════════════════
-//  PROCESS A SINGLE FILE → { sheetName, data }
-// ══════════════════════════════════════════════════════
-async function processSingleCsv(file) {
-  const fn    = file.name.toUpperCase();
-  const sheet = getSheetName(fn);
-  if (!sheet) return null;
-  const text = await readFileText(file);
-  let data   = parseCSVText(text);
-  if (!data.length) return null;
-  if (fn.includes('DOC')) data = processDocsIssued(data);
-  else data = data.map(trimAll);
-  return { sheet, data };
-}
-
-// ══════════════════════════════════════════════════════
-//  MERGE ALL → WORKBOOK
-// ══════════════════════════════════════════════════════
-// ── Template file storage ──
-let salesTemplateBuffer = null;
-
-// Template upload zone handlers
-const templateZone = document.getElementById('templateZone');
-['dragenter','dragover','dragleave','drop'].forEach(ev =>
-  templateZone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); })
-);
-['dragenter','dragover'].forEach(ev => templateZone.addEventListener(ev, () => templateZone.classList.add('dragover')));
-['dragleave','drop'].forEach(ev => templateZone.addEventListener(ev, () => templateZone.classList.remove('dragover')));
-templateZone.addEventListener('drop', e => {
-  const f = e.dataTransfer.files[0];
-  if (f) handleTemplateFile(f);
-});
-document.getElementById('templateInput').addEventListener('change', function() {
-  if (this.files[0]) handleTemplateFile(this.files[0]);
-});
-
-function handleTemplateFile(file) {
-  const reader = new FileReader();
-  reader.onload = e => {
-    salesTemplateBuffer = e.target.result;
-    // Update zone UI
-    document.getElementById('templateZoneText').textContent = '✅ ' + file.name + ' loaded';
-    const st = document.getElementById('templateStatus');
-    st.textContent = '✅ Template ready: ' + file.name + ' (' + fmtSz(file.size) + ')';
-    st.className = 'status-bar show success';
-    templateZone.style.borderColor = 'var(--success)';
-    templateZone.style.background  = 'rgba(34,197,94,.05)';
-  };
-  reader.onerror = () => {
-    const st = document.getElementById('templateStatus');
-    st.textContent = '❌ Failed to read template file.';
-    st.className = 'status-bar show error';
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-async function mergeSales() {
-  const isMulti = salesFormat === 'multiple';
-  try {
-    if (!salesTemplateBuffer) {
-      showSalesStatus('❌ Please upload your GSTR-1 template (FAB_SAL.xlsx) in Step 1 first.', 'error');
-      return;
-    }
-    showSalesStatus('Loading template…', 'info');
-    setSalesProgress(10);
-
-    const wb = XLSX.read(salesTemplateBuffer, { type: 'array', cellStyles: true });
-    setSalesProgress(25);
-
-    if (isMulti) {
-      // ── MULTIPLE MODE: group all files by sheet name, process each group ──
-      showSalesStatus(`Merging ${salesFileArray.length} files from ${batchNumber-1} batch(es)…`, 'info');
-
-      // Group files by target sheet
-      const sheetGroups = {};
-      for (const item of salesFileArray) {
-        const sName = getSheetName(item.file.name.toUpperCase());
-        if (!sName) continue;
-        if (!sheetGroups[sName]) sheetGroups[sName] = [];
-        sheetGroups[sName].push(item.file);
-      }
-
-      const groups     = Object.entries(sheetGroups);
-      let processed    = 0;
-      let totalRecords = 0;
-
-      for (const [sName, files] of groups) {
-        const ws = wb.Sheets[sName];
-        if (!ws) { processed += files.length; continue; }
-        const map = columnMappings[sName] || {};
-
-        for (const file of files) {
-          const text = await readFileText(file);
-          let data   = parseCSVText(text);
-          if (!data.length) { processed++; continue; }
-
-          if (file.name.toUpperCase().includes('DOC')) data = processDocsIssued(data);
-          else data = data.map(trimAll);
-
-          if (sName === 'exemp') updateExemptSheet(ws, data, map);
-          else appendDataToSheet(ws, data, map, sName);
-
-          totalRecords += data.length;
-          processed++;
-          setSalesProgress(25 + (processed / salesFileArray.length) * 60);
-        }
-      }
-
-      setSalesProgress(90);
-      showSalesStatus(`Generating Excel with ${totalRecords} total records…`, 'info');
-
-    } else {
-      // ── STANDARD / TALLY MODE: original logic ──
-      showSalesStatus('Processing CSV files…', 'info');
-      let done = 0;
-      const total = Object.keys(salesCsvFiles).length;
-
-      for (const [fn, file] of Object.entries(salesCsvFiles)) {
-        const sheet = getSheetName(fn);
-        if (!sheet) continue;
-        const text = await readFileText(file);
-        let data   = parseCSVText(text);
-        if (!data.length) continue;
-        if (fn.includes('DOC')) data = processDocsIssued(data);
-        else data = data.map(trimAll);
-        const ws  = wb.Sheets[sheet];
-        if (!ws) continue;
-        const map = columnMappings[sheet] || {};
-        if (sheet === 'exemp') updateExemptSheet(ws, data, map);
-        else appendDataToSheet(ws, data, map, sheet);
-        done++;
-        setSalesProgress(25 + (done / total) * 60);
-      }
-
-      setSalesProgress(90);
-      showSalesStatus('Generating Excel…', 'info');
-    }
-
-    const out  = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
-    setSalesProgress(100);
-    const blob = new Blob([out], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const ts   = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-    const suffix = isMulti ? `Multi_${batchNumber-1}batches` : salesFormat;
-    saveAs(blob, `GSTR1_${suffix}_${ts}.xlsx`);
-
-    const successMsg = isMulti
-      ? `✅ Done! Merged ${salesFileArray.length} files from ${batchNumber-1} batch(es) into one Excel.`
-      : '✅ Done! File downloaded.';
-    showSalesStatus(successMsg, 'success');
-    setTimeout(hideSalesProgress, 2000);
-
-  } catch (err) {
-    console.error(err);
-    showSalesStatus('❌ Error: ' + err.message, 'error');
-    hideSalesProgress();
-  }
-}
-
-// ══════════════════════════════════════════════════════
-//  PURCHASE (GSTR-2A/2B) — unchanged from original
-// ══════════════════════════════════════════════════════
-let pFiles = [];
-let pResults = [];
-
-const pZone = document.getElementById('pZone');
-['dragenter','dragover','dragleave','drop'].forEach(ev => pZone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
-['dragenter','dragover'].forEach(ev => pZone.addEventListener(ev, () => pZone.classList.add('dragover')));
-['dragleave','drop'].forEach(ev => pZone.addEventListener(ev, () => pZone.classList.remove('dragover')));
-pZone.addEventListener('drop', e => { addPurchaseFiles(Array.from(e.dataTransfer.files).filter(f => f.name.match(/\.(xlsx|xls)$/i))); });
-document.getElementById('pInput').addEventListener('change', e => {
-  addPurchaseFiles(Array.from(e.target.files).filter(f => f.name.match(/\.(xlsx|xls)$/i)));
-  e.target.value = '';
-});
-
-function addPurchaseFiles(files) {
-  files.forEach(f => { if (!pFiles.find(x => x.name === f.name && x.size === f.size)) pFiles.push(f); });
-  renderPFileList();
-  document.getElementById('purchaseBtn').disabled = !pFiles.length;
-}
-function removePFile(idx) { pFiles.splice(idx, 1); renderPFileList(); document.getElementById('purchaseBtn').disabled = !pFiles.length; }
-function renderPFileList() {
-  document.getElementById('pFileList').innerHTML = pFiles.map((f, i) => `
-    <div class="file-item">
-      <span class="file-icon">📗</span>
-      <div class="file-info">
-        <div class="file-name" title="${f.name}">${f.name}</div>
-        <div class="file-size">${fmtSz(f.size)}</div>
-      </div>
-      <button class="remove-btn" onclick="removePFile(${i})">✕</button>
-    </div>`).join('');
-}
-
-function pParseDate(v) {
-  if (!v) return '';
-  const s = String(v).trim();
-  if (s.match(/^\d{2}-\d{2}-\d{4}$/)) return s;
-  if (s.match(/^\d{2}\/\d{2}\/\d{4}$/)) { const [d, m, y] = s.split('/'); return `${d}-${m}-${y}`; }
-  if (typeof v === 'number') { const dt = new Date((v - 25569) * 86400 * 1000); return `${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}`; }
-  return s;
-}
-function pFmtNum(v) {
-  if (!v && v !== 0) return '';
-  const cleaned = typeof v === 'string' ? v.replace(/[^0-9.\-]/g, '') : v;
-  const n = parseFloat(cleaned);
-  return isNaN(n) ? '' : n.toFixed(2);
-}
-
-function pProcessSheet(sheet, sheetName) {
-  const stated = XLSX.utils.decode_range(sheet['!ref']);
-  let lastRow = stated.e.r;
-  for (let r = stated.e.r + 1; r <= 200; r++) {
-    let has = false;
-    for (let c = 0; c <= 25; c++) { const cell = sheet[XLSX.utils.encode_cell({r, c})]; if (cell && (cell.v !== undefined || cell.w !== undefined)) { has = true; lastRow = Math.max(lastRow, r); break; } }
-    if (!has && r > lastRow + 5) break;
-  }
-  const range = { s: stated.s, e: { r: lastRow, c: stated.e.c } };
-  let headerRow = -1;
-  for (let r = 0; r <= Math.min(20, range.e.r); r++) {
-    const cell = sheet[XLSX.utils.encode_cell({r, c: 0})];
-    let v = ''; if (cell) { v = (cell.w || (cell.v !== undefined ? String(cell.v) : '') || '').trim().replace(/\s+/g, ' '); }
-    if (v.toLowerCase().includes('gstin of supplier')) { headerRow = r; break; }
-  }
-  if (headerRow === -1) return [];
-  const headers = [];
-  for (let c = 0; c <= range.e.c; c++) {
-    const c1 = sheet[XLSX.utils.encode_cell({r: headerRow, c})];
-    const c2 = sheet[XLSX.utils.encode_cell({r: headerRow + 1, c})];
-    let v1 = '', v2 = '';
-    if (c1) { v1 = (c1.w || (c1.v !== undefined ? String(c1.v) : '') || '').trim().replace(/\s+/g, ' '); }
-    if (c2) { v2 = (c2.w || (c2.v !== undefined ? String(c2.v) : '') || '').trim().replace(/\s+/g, ' '); }
-    headers.push(v2 && v2 !== 'undefined' ? v2 : (v1 && v1 !== 'undefined' ? v1 : ''));
-  }
-  const findCol = terms => {
-    if (!Array.isArray(terms)) terms = [terms];
-    for (const t of terms) { const i = headers.findIndex(h => h && h.toLowerCase().includes(t.toLowerCase())); if (i >= 0) return i; }
-    return -1;
-  };
-  const cols = {
-    gstin: findCol(['GSTIN of supplier', 'GSTIN']), tradeName: findCol(['Trade/Legal name', 'Trade name']),
-    invoiceNumber: findCol(['Invoice number', 'Note number']), invoiceDate: findCol(['Invoice Date', 'Invoice date', 'Note date']),
-    rate: findCol(['Rate (%)', 'Rate']), taxableValue: findCol(['Taxable Value (₹)', 'Taxable Value']),
-    stateTax: findCol(['State/UT tax (₹)', 'State/UT tax', 'State/UT']), centralTax: findCol(['Central Tax (₹)', 'Central Tax']),
-    integratedTax: findCol(['Integrated Tax  (₹)', 'Integrated Tax (₹)', 'Integrated Tax']),
-    invoiceValue: findCol(['Invoice Value (₹)', 'Invoice Value', 'Note Value']),
-    reverseCharge: findCol(['Supply Attract Reverse Charge', 'Reverse Charge', 'RCM'])
-  };
-  const dataStart = headerRow + 2; const out = [];
-  for (let r = dataStart; r <= range.e.r; r++) {
-    const row = []; let hasData = false;
-    for (let c = 0; c <= range.e.c; c++) {
-      const cell = sheet[XLSX.utils.encode_cell({r, c})];
-      let v = '';
-      if (cell) {
-        if (cell.t === 'n') { v = (cell.v !== undefined && cell.v !== null) ? String(cell.v) : ''; }
-        else if (cell.w !== undefined && cell.w !== null) { v = String(cell.w); }
-        else if (cell.v !== undefined && cell.v !== null) { v = String(cell.v); }
-        if (typeof v === 'string') v = v.trim();
-      }
-      row.push(v);
-      if (v && v !== 'undefined' && v !== 'null') hasData = true;
-    }
-    if (!hasData) continue;
-    const gstin = cols.gstin >= 0 ? String(row[cols.gstin] || '').trim() : '';
-    const inv   = cols.invoiceNumber >= 0 ? String(row[cols.invoiceNumber] || '').trim() : '';
-    if (!gstin && !inv) continue;
-    if (cols.reverseCharge >= 0) { const rcm = String(row[cols.reverseCharge] || '').trim().toLowerCase(); if (rcm === 'yes' || rcm === 'y') continue; }
-    out.push({
-      'SUPPLIER INV NO': inv, 'INVOICE DATE': cols.invoiceDate >= 0 ? pParseDate(row[cols.invoiceDate]) : '',
-      'GST NO': gstin, 'PARTY A/C NAME': cols.tradeName >= 0 ? String(row[cols.tradeName] || '').trim() : '',
-      'PLACE OF SUPPLY': '', 'Rate (%)': cols.rate >= 0 ? String(row[cols.rate] || '').trim() : '',
-      'Taxable Value (₹)': cols.taxableValue >= 0 ? pFmtNum(row[cols.taxableValue]) : '',
-      'SGST': cols.stateTax >= 0 ? pFmtNum(row[cols.stateTax]) : '',
-      'CGST': cols.centralTax >= 0 ? pFmtNum(row[cols.centralTax]) : '',
-      'IGST': cols.integratedTax >= 0 ? pFmtNum(row[cols.integratedTax]) : '',
-      'TOTAL AMOUNT': cols.invoiceValue >= 0 ? pFmtNum(row[cols.invoiceValue]) : '',
-      'VOUCHER NO': inv, 'ROUND': '', 'SOURCE': sheetName
-    });
+    out[tmplCol] = val;
   }
   return out;
 }
 
-async function processPurchaseFile(file) {
-  try {
-    const data = await file.arrayBuffer();
-    const wb   = XLSX.read(data, { type: 'array' });
-    const skip = ['READ ME', 'SUMMARY', 'README'];
-    const find = match => wb.SheetNames.find(n => match(n.toUpperCase()) && !skip.includes(n.toUpperCase()));
-    const b2b = find(n => n === 'B2B'), cdnr = find(n => n === 'CDNR'), b2bcdnr = find(n => n === 'B2B-CDNR' || n === 'B2BCDNR');
-    if (!b2b && !cdnr && !b2bcdnr) throw new Error(`No B2B/CDNR sheets. Sheets: ${wb.SheetNames.join(', ')}`);
-    let all = []; const sheets = [];
-    if (b2b) { const d = pProcessSheet(wb.Sheets[b2b], 'B2B'); all = all.concat(d); if (d.length) sheets.push({name:'B2B', count:d.length}); }
-    if (b2bcdnr) { const d = pProcessSheet(wb.Sheets[b2bcdnr], 'B2B-CDNR'); all = all.concat(d); if (d.length) sheets.push({name:'B2B-CDNR', count:d.length}); }
-    if (cdnr) { const d = pProcessSheet(wb.Sheets[cdnr], 'CDNR'); all = all.concat(d); if (d.length) sheets.push({name:'CDNR', count:d.length}); }
-    if (!all.length) throw new Error('No valid data rows found.');
-    const s = key => all.reduce((t, r) => t + (parseFloat(r[key]) || 0), 0);
-    return { fileName: file.name, baseName: file.name.replace(/\.[^/.]+$/, ''), status: 'success', allData: all, sheets, records: all.length, taxable: s('Taxable Value (₹)'), sgst: s('SGST'), cgst: s('CGST'), igst: s('IGST'), totalAmount: s('TOTAL AMOUNT') };
-  } catch (err) {
-    return { fileName: file.name, baseName: file.name.replace(/\.[^/.]+$/, ''), status: 'error', error: err.message };
+// Write rows into a workbook sheet starting after header row
+function writeRows(ws, sheetName, rows) {
+  if (!rows.length) return;
+  const cfg = SHEETS[sheetName];
+  const hrow = cfg.hrow; // 0-indexed
+  const range = XLSX.utils.decode_range(ws["!ref"]||"A1");
+  // Read template headers
+  const thdrs=[];
+  for(let c=range.s.c;c<=range.e.c;c++){
+    const cell=ws[XLSX.utils.encode_cell({r:hrow,c})];
+    thdrs.push(cell&&cell.v!=null?cell.v.toString().trim():"");
   }
-}
+  // Find first empty data row (after header)
+  let startRow = hrow+1;
+  for(let r=hrow+1;r<=range.e.r;r++){
+    let has=false;
+    for(let c=range.s.c;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r,c})];if(cell&&cell.v!=null&&cell.v!==""){has=true;break;}}
+    if(has) startRow=r+1;
+  }
 
-function buildPBuffer(result) {
-  const wb = XLSX.utils.book_new();
-  ['B2B', 'B2B-CDNR', 'CDNR'].forEach(src => {
-    const rows = result.allData.filter(r => r.SOURCE === src).map(({SOURCE, ...rest}) => rest);
-    if (rows.length) { const ws = XLSX.utils.json_to_sheet(rows); ws['!cols'] = Array(14).fill({wch: 15}); XLSX.utils.book_append_sheet(wb, ws, src); }
+  rows.forEach((row,ri)=>{
+    const er=startRow+ri;
+    thdrs.forEach((th,ci)=>{
+      if(!th) return;
+      const val = row[th]!==undefined ? row[th] : "";
+      const addr = XLSX.utils.encode_cell({r:er, c:range.s.c+ci});
+      if(val===""||val==null){ws[addr]={t:"s",v:""};return;}
+      const n=parseFloat(val.toString().replace(/,/g,""));
+      if(!isNaN(n)&&String(val).match(/^-?\d+\.?\d*$/)) ws[addr]={t:"n",v:n};
+      else ws[addr]={t:"s",v:val.toString()};
+    });
   });
-  return XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  range.e.r = Math.max(range.e.r, startRow+rows.length-1);
+  ws["!ref"] = XLSX.utils.encode_range(range);
 }
 
-async function startPurchase() {
-  if (!pFiles.length) return;
-  document.getElementById('pUploadCard').style.display = 'none';
-  document.getElementById('pProcessCard').style.display = 'none';
-  document.getElementById('pProcessing').classList.add('show');
-  document.getElementById('pResultsCard').style.display = 'block';
-  pResults = [];
-  const total = pFiles.length;
-  for (let i = 0; i < total; i++) {
-    document.getElementById('pProcText').textContent = `Processing file ${i + 1} of ${total}…`;
-    document.getElementById('pProcSub').textContent  = pFiles[i].name;
-    const res = await processPurchaseFile(pFiles[i]);
-    pResults.push(res);
-    appendPResult(res, pResults.length - 1);
-    document.getElementById('pResultsCount').textContent = `${pResults.length} / ${total}`;
+// ── MAIN PROCESS
+async function process() {
+  try {
+    setStat("Loading template...", "in"); setP(10);
+    let binary;
+    try { binary = Uint8Array.from(atob(TMPL), c=>c.charCodeAt(0)); }
+    catch(e){ throw new Error("Template decode failed: "+e.message); }
+    const wb = XLSX.read(binary, {type:"array", cellStyles:true});
+    setP(20);
+
+    // Accumulate rows per sheet
+    const data = {};
+    const keys = Object.keys(files);
+    let i=0;
+    for(const fname of keys){
+      i++;
+      const sn = sheetOf(fname);
+      if(!sn){ setP(20+i/keys.length*40); continue; }
+      if(!data[sn]) data[sn]=[];
+
+      const f = files[fname];
+      const ext = fname.split(".").pop().toUpperCase();
+
+      if(ext==="XLSX"||ext==="XLS"){
+        // Read as Excel (FAB SAL format)
+        setStat(`Reading Excel: ${fname}...`,"in");
+        const buf = await readBuf(f);
+        const srcWb = XLSX.read(buf, {type:"arraybuffer"});
+        const srcWs = srcWb.Sheets[sn];
+        if(!srcWs){ console.warn("Sheet",sn,"not in",fname); continue; }
+        const rows = xlsxSheetToRows(srcWs, SHEETS[sn].hrow);
+        // Excel rows already match template columns — map them directly
+        const mapped = rows.map(r=>{
+          const out={};
+          for(const [tc, srcs] of Object.entries(COL[sn]||{})){
+            let val="";
+            for(const s of srcs){ if(r[s]!==undefined&&r[s]!==""){val=r[s];break;} }
+            out[tc]=val;
+          }
+          return out;
+        }).filter(r=>Object.values(r).some(v=>v!==""));
+        data[sn].push(...mapped);
+      } else {
+        // Read as CSV
+        setStat(`Reading CSV: ${fname}...`,"in");
+        const txt = await readText(f);
+        let rows = parseCSV(txt).map(trimAll);
+        const mapped = rows.map(r=>mapRow(r,sn)).filter(r=>r&&Object.values(r).some(v=>v!==""));
+        data[sn].push(...mapped);
+      }
+      setP(20+i/keys.length*50);
+    }
+
+    setStat("Writing to template sheets...","in"); setP(72);
+    let si=0;
+    for(const [sn, rows] of Object.entries(data)){
+      const ws = wb.Sheets[sn];
+      if(!ws){ console.warn("Template missing sheet:",sn); si++; continue; }
+      writeRows(ws, sn, rows);
+      si++;
+      setP(72+si/Object.keys(data).length*18);
+    }
+
+    setP(92); setStat("Generating Excel file...","in");
+    const out = XLSX.write(wb, {bookType:"xlsx",type:"array",cellStyles:true});
+    const blob = new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+    const ts = new Date().toISOString().replace(/[:.]/g,"-").slice(0,-5);
+    saveAs(blob, `FAB_SAL_GSTR1_${ts}.xlsx`);
+    setP(100); setStat("Done! FAB SAL Excel downloaded.","ok");
+    setTimeout(clearP,3000);
+  } catch(e){
+    console.error(e); setStat("Error: "+e.message,"er"); clearP();
   }
-  document.getElementById('pProcessing').classList.remove('show');
-  showPSummary();
 }
 
-function appendPResult(r, idx) {
-  const list = document.getElementById('pResultsList');
-  const div  = document.createElement('div');
-  div.className = `result-row ${r.status === 'success' ? 'ok' : 'err'}`;
-  if (r.status === 'success') {
-    const shBadges = r.sheets.map(s => {
-      const cls = s.name === 'B2B' ? 'sh-b2b' : s.name === 'CDNR' ? 'sh-cdnr' : 'sh-b2bc';
-      return `<span class="sh-badge ${cls}">${s.name}(${s.count})</span>`;
-    }).join('');
-    div.innerHTML = `
-      <div class="result-top" onclick="togglePDetail(${idx})">
-        <div class="result-left"><span>✅</span><span class="rname" title="${r.fileName}">${r.fileName}</span></div>
-        <div class="result-right">
-          <span class="rec-badge">${r.records} rows</span>
-          <button class="save-btn" onclick="event.stopPropagation();dlSingle(${idx})">⬇ Save</button>
-          <span class="chevron" id="chev-${idx}">▼</span>
-        </div>
-      </div>
-      <div class="result-detail" id="det-${idx}">
-        <div class="sheet-badges">${shBadges}</div>
-        <div class="detail-stats">
-          <div><div class="ds-label">Records</div><div class="ds-val">${r.records}</div></div>
-          <div><div class="ds-label">Taxable</div><div class="ds-val">₹${r.taxable.toFixed(2)}</div></div>
-          <div><div class="ds-label">Total Amt</div><div class="ds-val">₹${r.totalAmount.toFixed(2)}</div></div>
-          <div><div class="ds-label">File</div><div class="ds-val" style="font-size:.68rem">${r.fileName}</div></div>
-        </div>
-        <div class="tax-row">
-          <div class="tax-pill">SGST <span>₹${r.sgst.toFixed(2)}</span></div>
-          <div class="tax-pill">CGST <span>₹${r.cgst.toFixed(2)}</span></div>
-          <div class="tax-pill">IGST <span>₹${r.igst.toFixed(2)}</span></div>
-        </div>
-        <button class="save-btn" onclick="dlSingle(${idx})">⬇ Download ${r.baseName}.xlsx</button>
-      </div>`;
-  } else {
-    div.innerHTML = `
-      <div class="result-top" onclick="togglePDetail(${idx})">
-        <div class="result-left"><span>❌</span><span class="rname">${r.fileName}</span></div>
-        <div class="result-right"><span class="fail-badge">Failed</span><span class="chevron" id="chev-${idx}">▼</span></div>
-      </div>
-      <div class="result-detail" id="det-${idx}"><p class="error-msg">⚠ ${r.error}</p></div>`;
-  }
-  list.appendChild(div);
-  list.scrollTop = list.scrollHeight;
-}
-
-function togglePDetail(idx) {
-  document.getElementById(`det-${idx}`).classList.toggle('open');
-  document.getElementById(`chev-${idx}`).classList.toggle('open');
-}
-
-function showPSummary() {
-  const ok   = pResults.filter(r => r.status === 'success');
-  const fail = pResults.filter(r => r.status === 'error');
-  const totR = ok.reduce((s, r) => s + r.records, 0);
-  const totA = ok.reduce((s, r) => s + r.totalAmount, 0);
-  const totT = ok.reduce((s, r) => s + r.taxable, 0);
-  document.getElementById('pStats').innerHTML = `
-    <div class="stat-box"><div class="stat-label">Files</div><div class="stat-val sv-cyan">${pResults.length}</div></div>
-    <div class="stat-box"><div class="stat-label">Success</div><div class="stat-val sv-green">${ok.length}</div></div>
-    <div class="stat-box"><div class="stat-label">Failed</div><div class="stat-val sv-red">${fail.length}</div></div>
-    <div class="stat-box"><div class="stat-label">Records</div><div class="stat-val sv-indigo">${totR}</div></div>
-    <div class="stat-box"><div class="stat-label">Taxable</div><div class="stat-val sv-amber" style="font-size:.95rem">₹${(totT/100000).toFixed(1)}L</div></div>
-    <div class="stat-box"><div class="stat-label">Total</div><div class="stat-val sv-purple" style="font-size:.95rem">₹${(totA/100000).toFixed(1)}L</div></div>`;
-  document.getElementById('dlAllBtn').textContent = `⬇ Download All (${ok.length} files)`;
-  document.getElementById('pSummary').classList.add('show');
-}
-
-function dlSingle(idx) {
-  const r = pResults[idx]; if (r.status !== 'success') return;
-  const buf  = buildPBuffer(r);
-  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${r.baseName}.xlsx`; a.click();
-}
-
-async function downloadAllPurchase() {
-  const btn = document.getElementById('dlAllBtn'); btn.disabled = true;
-  const ok  = pResults.filter(r => r.status === 'success');
-  for (let i = 0; i < ok.length; i++) {
-    btn.textContent = `⏳ ${i+1}/${ok.length}…`;
-    dlSingle(pResults.indexOf(ok[i]));
-    await new Promise(res => setTimeout(res, 400));
-  }
-  btn.disabled = false;
-  btn.textContent = `⬇ Download All (${ok.length} files)`;
-}
-
-function resetPurchase() {
-  pFiles = []; pResults = [];
-  document.getElementById('pFileList').innerHTML = '';
-  document.getElementById('pResultsList').innerHTML = '';
-  document.getElementById('pUploadCard').style.display = 'block';
-  document.getElementById('pProcessCard').style.display = 'block';
-  document.getElementById('pResultsCard').style.display = 'none';
-  document.getElementById('pSummary').classList.remove('show');
-  document.getElementById('pProcessing').classList.remove('show');
-  document.getElementById('purchaseBtn').disabled = true;
-}
+function setStat(m,t){const s=document.getElementById("stat");s.textContent=m;s.className="stat "+t;}
+function setP(v){document.getElementById("pb").classList.add("on");document.getElementById("pf").style.width=v+"%";}
+function clearP(){document.getElementById("pb").classList.remove("on");document.getElementById("pf").style.width="0%";}
 </script>
 </body>
 </html>
