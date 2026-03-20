@@ -143,9 +143,11 @@ hr.div{border:none;border-top:1px solid var(--br);margin:1.8rem 0}
       <div style="background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.2);border-radius:10px;padding:1rem 1.2rem;margin:1rem 0;font-size:.85rem;color:var(--lt)">
         <b style="color:#dc2626">What this fixer does:</b><br>
         <span style="color:var(--txt)">&#10003;</span> Removes error GSTIN invoices from <b>B2B</b><br>
-        <span style="color:var(--txt)">&#10003;</span> Adds them to <b>B2CS</b> — consolidated by rate (one row per %)<br>
-        <span style="color:var(--txt)">&#10003;</span> Moves matching taxable from <b>HSN B2B → HSN B2C</b> (highest-value row adjusted first)<br>
-        <span style="color:var(--txt)">&#10003;</span> Output: clean Speqta Excel where B2B + B2CS + HSN all reconcile
+        <span style="color:var(--txt)">&#10003;</span> Adds them to <b>B2CS</b> — all same-rate values summed → one row per %<br>
+        <span style="color:var(--txt)">&#10003;</span> <b>Reduces HSN B2B</b> (highest-taxable row first) + adds to <b>HSN B2C</b><br>
+        <span style="color:var(--txt)">&#10003;</span> Copies CDNR, export, nil/exempt, docs unchanged<br>
+        <span style="color:var(--txt)">&#10003;</span> Output: Speqta Excel where B2B + B2CS − CDNR = HSN total<br>
+        <b style="color:#92400e">&#9888; Required files: GSTIN Error CSV + B2B source + HSN_B2B CSV + HSN_B2C CSV (or one_sale Excel)</b>
       </div>
 
       <hr class="div">
@@ -796,12 +798,14 @@ function fxAddFiles(list) {
         (u.includes('GSTIN') && (u.endsWith('.CSV')||u.endsWith('.XLSX')))) {
       fxFiles.error = f;
     } else if (u.endsWith('.XLSX') || u.endsWith('.XLS')) {
-      // Could be Speqta output or one_sale type
-      if (u.includes('SPEQTA') || u.includes('GSTR1')) {
+      // Could be Speqta output or one_sale type (contains HSN sheets)
+      if (u.includes('SPEQTA') || u.includes('GSTR1') || u.includes('FIXED')) {
         fxFiles.speqta = f;
       } else {
-        // Treat as source data (one_sale type)
+        // Source Excel (one_sale / Himalaya / Bootree) — has B2B + HSN sheets
         fxFiles.b2b.push(f);
+        fxFiles.hsn_b2b.push(f); // same file has HSN(B2B) sheet
+        fxFiles.hsn_b2c.push(f); // same file has HSN(B2C) sheet
       }
     } else if (u.includes('HSN') && u.includes('B2B')) {
       fxFiles.hsn_b2b.push(f);
@@ -921,11 +925,19 @@ async function parseHsnFile(f, htype) {
   if(u.endsWith('.XLSX')||u.endsWith('.XLS')){
     const buf = await fxReadBuf(f);
     const srcWb = XLSX.read(buf,{type:'arraybuffer'});
-    // Try HSN(B2B) or HSN(B2C) sheet
-    const wsName = htype==='B2B' ? (srcWb.SheetNames.find(n=>n.includes('B2B'))||srcWb.SheetNames[0]) : (srcWb.SheetNames.find(n=>n.includes('B2C'))||srcWb.SheetNames[1]);
-    const ws = srcWb.Sheets[wsName];
+    // Find the right sheet: for one_sale type it's "HSN(B2B)" or "HSN(B2C)"
+    // For speqta output it's "hsn" with a Type column
+    let ws = null;
+    let hrow = 0;
+    if(htype==='B2B'){
+      const wsName = srcWb.SheetNames.find(n=>n.toUpperCase().includes('HSN')&&n.toUpperCase().includes('B2B'));
+      if(wsName){ ws=srcWb.Sheets[wsName]; hrow=0; }
+    } else {
+      const wsName = srcWb.SheetNames.find(n=>n.toUpperCase().includes('HSN')&&n.toUpperCase().includes('B2C'));
+      if(wsName){ ws=srcWb.Sheets[wsName]; hrow=0; }
+    }
     if(!ws) return [];
-    rows = xlsxSheetRows(ws,0);
+    rows = xlsxSheetRows(ws, hrow);
   } else {
     const txt = await fxReadText(f);
     rows = parseCSV(txt).map(trimAll);
@@ -1061,7 +1073,12 @@ async function runFixer() {
     }
     for(const f of fxFiles.hsn_b2b){const rows=await parseHsnFile(f,'B2B');hsnB2b.push(...rows);}
     for(const f of fxFiles.hsn_b2c){const rows=await parseHsnFile(f,'B2C');hsnB2c.push(...rows);}
-    fxStat(`Adjusting HSN (${hsnB2b.length} B2B rows, ${hsnB2c.length} B2C rows)...`,'in'); fxP(55);
+    if(hsnB2b.length===0 && Object.keys(movedTaxableByRate).length>0){
+      // No B2B HSN data — fixer can't reduce B2B HSN
+      fxStat('⚠ No HSN B2B data found. Upload HSN_B2B_.CSV or the source Excel (one_sale) to enable HSN adjustment.','er');
+      btn.disabled=false; return;
+    }
+    fxStat(`Adjusting HSN: reducing ${hsnB2b.length} B2B rows, adding to ${hsnB2c.length} B2C rows...`,'in'); fxP(55);
 
     // 6. HSN adjustment per rate
     // Total B2B taxable per rate (before removal)
