@@ -924,7 +924,7 @@ async function mergeSales() {
     showSalesStatus('Loading template…', 'info');
     setSalesProgress(10);
 
-    const templateBin = Uint8Array.from(atob(EMBEDDED_TEMPLATE_BASE64.trim()), c => c.charCodeAt(0));
+    const templateBin = Uint8Array.from(atob(EMBEDDED_TEMPLATE_BASE64.replace(/\s+/g, '')), c => c.charCodeAt(0));
     const wb = XLSX.read(templateBin, { type: 'array', cellStyles: true });
     setSalesProgress(25);
 
