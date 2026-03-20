@@ -517,9 +517,15 @@ async function process(){
       Docs_issued:"Docs_issued"
     };
 
+    // Ensure hsn_b2b written before hsn_b2c (B2B on top, B2C below)
+    const WRITE_ORDER=["b2b","b2cl","b2cs","export","Nil_exempt_NonGST","cdnr","cdnur",
+                       "adv_tax","adv_tax_adjusted","hsn_b2b","hsn_b2c","Docs_issued"];
+    const orderedKeys=[...WRITE_ORDER.filter(k=>data[k]),...Object.keys(data).filter(k=>!WRITE_ORDER.includes(k))];
     let si=0;
-    const total=Object.keys(data).length;
-    for(const[sk,rows]of Object.entries(data)){
+    const total=orderedKeys.length;
+    for(const sk of orderedKeys){
+      const rows=data[sk];
+      if(!rows){si++;continue;}
       const sn=SN_MAP[sk];
       if(!sn){si++;continue;}
       const ws=wb.Sheets[sn];
