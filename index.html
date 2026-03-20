@@ -118,8 +118,8 @@ hr.div{border:none;border-top:1px solid var(--br);margin:1.8rem 0}
       </div>
       <div class="pbar" id="pb"><div class="pfil" id="pf"></div></div>
       <div class="stat" id="stat"></div>
-    </div>
     </div><!-- end panel-converter -->
+
 
     <div id="panel-fixer" style="display:none">
       <div class="step">
@@ -158,6 +158,7 @@ hr.div{border:none;border-top:1px solid var(--br);margin:1.8rem 0}
         <div class="stat" id="fx-stat"></div>
       </div>
     </div>
+  </div><!-- end card -->
   </div>
 </div>
 <script>
@@ -1174,9 +1175,48 @@ async function runFixer() {
     }));
     fxWriteRows(wsB2b, b2bOut);
 
-    // Write B2CS (existing rows NOT affected + new consolidated rows from moved B2B)
-    // First get existing B2CS from speqta if available
-    let existingB2cs = [];
+    // ── Copy CDNR from speqta output (unchanged) ──
+    if(fxFiles.speqta){
+      const buf=await fxReadBuf(fxFiles.speqta);
+      const srcWb=XLSX.read(buf,{type:'arraybuffer'});
+      // Copy CDNR sheet
+      const wsCdnrSrc=srcWb.Sheets['cdnr'];
+      const wsCdnrDst=outWb.Sheets['cdnr'];
+      if(wsCdnrSrc&&wsCdnrDst){
+        const range=XLSX.utils.decode_range(wsCdnrSrc['!ref']||'A1');
+        const hdrs=[];
+        for(let c=range.s.c;c<=range.e.c;c++){const cell=wsCdnrSrc[XLSX.utils.encode_cell({r:0,c})];hdrs.push(cell&&cell.v!=null?cell.v.toString():'');}
+        const cdnrRows=[];
+        for(let r=1;r<=range.e.r;r++){
+          const row={};let has=false;
+          hdrs.forEach((h,ci)=>{const cell=wsCdnrSrc[XLSX.utils.encode_cell({r,c:range.s.c+ci})];const v=cell&&cell.v!=null?cell.v.toString():'';row[h]=v;if(v!==''&&v!==null)has=true;});
+          if(has)cdnrRows.push(row);
+        }
+        fxWriteRows(wsCdnrDst, cdnrRows);
+      }
+      // Also copy other sheets that fixer doesn't touch: export, nil_exempt, cdnur, adv_tax, adv_tax_adjusted, Docs_issued
+      const copySheets=['export','Nil_exempt_NonGST','cdnur','adv_tax','adv_tax_adjusted','Docs_issued'];
+      for(const sn of copySheets){
+        const wsSrc=srcWb.Sheets[sn];
+        const wsDst=outWb.Sheets[sn];
+        if(!wsSrc||!wsDst)continue;
+        const range=XLSX.utils.decode_range(wsSrc['!ref']||'A1');
+        const hdrs=[];
+        for(let c=range.s.c;c<=range.e.c;c++){const cell=wsSrc[XLSX.utils.encode_cell({r:0,c})];hdrs.push(cell&&cell.v!=null?cell.v.toString():'');}
+        const sheetRows=[];
+        for(let r=1;r<=range.e.r;r++){
+          const row={};let has=false;
+          hdrs.forEach((h,ci)=>{const cell=wsSrc[XLSX.utils.encode_cell({r,c:range.s.c+ci})];const v=cell&&cell.v!=null?cell.v.toString():'';row[h]=v;if(v!==''&&v!==null)has=true;});
+          if(has)sheetRows.push(row);
+        }
+        if(sheetRows.length) fxWriteRows(wsDst, sheetRows);
+      }
+    }
+
+    // ── Write B2CS: merge existing + moved B2B rows, sum by rate → ONE row per rate ──
+    // Accumulate ALL b2cs into one map keyed by rate
+    const mergedB2cs = {};  // rate → {taxable, cess, pos}
+    // 1. Existing b2cs from speqta
     if(fxFiles.speqta){
       const buf=await fxReadBuf(fxFiles.speqta);
       const srcWb=XLSX.read(buf,{type:'arraybuffer'});
@@ -1188,19 +1228,36 @@ async function runFixer() {
         for(let r=1;r<=range.e.r;r++){
           const row={};let has=false;
           hdrs.forEach((h,ci)=>{const cell=ws[XLSX.utils.encode_cell({r,c:range.s.c+ci})];const v=cell&&cell.v!=null?cell.v:'';row[h]=v;if(v!==''&&v!==null)has=true;});
-          if(has)existingB2cs.push(row);
+          if(!has)continue;
+          const rate=parseFloat(row['GST%']||row['Rate']||0);
+          const taxable=parseFloat(row['Taxable Value']||0);
+          const cess=parseFloat(row['CESS']||row['Cess Amount']||0);
+          const pos=cleanPos((row['Place Of Supply']||'Karnataka').toString());
+          if(!mergedB2cs[rate]) mergedB2cs[rate]={taxable:0,cess:0,pos:pos};
+          mergedB2cs[rate].taxable += taxable;
+          mergedB2cs[rate].cess    += cess;
         }
       }
     }
+    // 2. Add moved B2B rows (already in b2csByRate)
+    for(const [rateStr, agg] of Object.entries(b2csByRate)){
+      const rate=parseFloat(rateStr);
+      if(!mergedB2cs[rate]) mergedB2cs[rate]={taxable:0,cess:0,pos:agg.pos};
+      mergedB2cs[rate].taxable += agg.taxable;
+      mergedB2cs[rate].cess    += agg.cess;
+    }
+    // 3. Write — one row per rate, sorted ascending
     const wsB2cs = outWb.Sheets['b2cs'];
-    // Write existing b2cs first
-    fxWriteRows(wsB2cs, existingB2cs);
-    // Then append new consolidated B2CS rows from moved invoices
-    const newB2csRows = Object.entries(b2csByRate).map(([rate,agg])=>({
-      'GST%':parseFloat(rate),'Taxable Value':+agg.taxable.toFixed(2),
-      'CESS':+agg.cess.toFixed(2)||'','Place Of Supply':agg.pos,'GSTIN of E-Commerce Operator':''
-    }));
-    fxWriteRows(wsB2cs, newB2csRows);
+    const finalB2csRows = Object.entries(mergedB2cs)
+      .sort((a,b)=>parseFloat(a[0])-parseFloat(b[0]))
+      .map(([rate,agg])=>({
+        'GST%':parseFloat(rate),
+        'Taxable Value':+agg.taxable.toFixed(2),
+        'CESS':agg.cess?+agg.cess.toFixed(2):'',
+        'Place Of Supply':agg.pos||'Karnataka',
+        'GSTIN of E-Commerce Operator':''
+      }));
+    fxWriteRows(wsB2cs, finalB2csRows);
 
     // Write HSN (B2B then B2C) - filter out rows with zero taxable
     const wsHsn = outWb.Sheets['hsn'];
