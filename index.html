@@ -1,1327 +1,271 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GSTR1 Processor – Speqta</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{--P:#2563eb;--PD:#1e40af;--S:#10b981;--E:#ef4444;--W:#f59e0b;--bg:#f8fafc;--card:#fff;--txt:#1e293b;--lt:#64748b;--br:#e2e8f0;--sh:0 4px 6px -1px rgba(0,0,0,.1);--shl:0 20px 25px -5px rgba(0,0,0,.1)}
-body{font-family:"DM Sans",sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;padding:2rem;color:var(--txt)}
-.wrap{max-width:1100px;margin:0 auto}
-.hdr{text-align:center;margin-bottom:2.5rem;color:#fff}
-.hdr h1{font-size:2.2rem;font-weight:700;font-family:"Space Mono",monospace;text-shadow:2px 2px 4px rgba(0,0,0,.2)}
-.hdr p{font-size:1rem;opacity:.95;margin-top:.4rem}
-.badges{display:flex;gap:.7rem;justify-content:center;flex-wrap:wrap;margin-top:.8rem}
-.bdg{background:rgba(255,255,255,.2);padding:.35rem .9rem;border-radius:20px;font-size:.82rem}
-.card{background:var(--card);border-radius:20px;padding:2.5rem;box-shadow:var(--shl)}
-.step{margin-bottom:1.8rem}
-.sth{display:flex;align-items:center;gap:1rem;margin-bottom:1rem}
-.sn{width:38px;height:38px;background:linear-gradient(135deg,var(--P),var(--PD));color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:"Space Mono",monospace;flex-shrink:0;box-shadow:var(--sh)}
-.stl{font-size:1.15rem;font-weight:700;color:var(--txt)}
-.sub{font-size:.8rem;font-weight:400;color:var(--lt)}
-.upz{border:3px dashed var(--br);border-radius:14px;padding:2.2rem 2rem;text-align:center;background:var(--bg);transition:all .3s;cursor:pointer}
-.upz:hover{border-color:var(--P);background:rgba(37,99,235,.03)}
-.upz.over{border-color:var(--P);background:rgba(37,99,235,.08);transform:scale(1.01)}
-.upi{font-size:2.4rem;margin-bottom:.6rem;opacity:.6}
-.upt{font-size:1rem;color:var(--txt);margin-bottom:.3rem}
-.uph{font-size:.82rem;color:var(--lt)}
-input[type=file]{display:none}
-.sgroups{margin-top:1.4rem;display:flex;flex-direction:column;gap:.7rem}
-.sgrp{background:var(--bg);border:1px solid var(--br);border-radius:12px;overflow:hidden}
-.sgh{display:flex;align-items:center;gap:.7rem;padding:.7rem 1rem;background:rgba(37,99,235,.05);border-bottom:1px solid var(--br);flex-wrap:wrap}
-.sbdg{background:var(--P);color:#fff;font-size:.68rem;font-weight:700;padding:.18rem .55rem;border-radius:5px;font-family:"Space Mono",monospace;white-space:nowrap}
-.xbdg{background:#7c3aed;color:#fff;font-size:.68rem;font-weight:700;padding:.18rem .55rem;border-radius:5px;font-family:"Space Mono",monospace;white-space:nowrap}
-.sgttl{font-weight:700;font-size:.88rem;color:var(--txt)}
-.ctag{margin-left:auto;background:rgba(16,185,129,.12);color:var(--S);font-size:.72rem;font-weight:700;padding:.18rem .55rem;border-radius:5px}
-.csvtag{background:rgba(245,158,11,.12);color:var(--W);font-size:.68rem;font-weight:700;padding:.15rem .5rem;border-radius:5px}
-.xlstag{background:rgba(124,58,237,.12);color:#7c3aed;font-size:.68rem;font-weight:700;padding:.15rem .5rem;border-radius:5px}
-.sgf{display:flex;flex-wrap:wrap;gap:.5rem;padding:.7rem 1rem}
-.chip{background:#fff;border:1px solid var(--br);border-radius:7px;padding:.4rem .7rem;display:flex;align-items:center;gap:.45rem;font-size:.82rem;font-weight:500;transition:all .2s;animation:pop .2s ease}
-@keyframes pop{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
-.chip:hover{box-shadow:var(--sh)}
-.csz{font-size:.7rem;color:var(--lt)}
-.crm{background:none;border:none;color:var(--E);cursor:pointer;font-size:1.05rem;padding:0 .1rem;border-radius:3px;line-height:1}
-.crm:hover{background:rgba(239,68,68,.1)}
-.unrec{margin-top:.7rem;background:rgba(245,158,11,.06);border:1px dashed var(--W);border-radius:9px;padding:.7rem 1rem}
-.urt{font-size:.8rem;font-weight:700;color:var(--W);margin-bottom:.45rem}
-.xlsgrp{background:#faf5ff;border:1px solid #ddd6fe;border-radius:12px;overflow:hidden}
-.xlsgh{display:flex;align-items:center;gap:.7rem;padding:.7rem 1rem;background:#ede9fe;border-bottom:1px solid #ddd6fe;flex-wrap:wrap}
-.xlssheets{display:flex;flex-wrap:wrap;gap:.4rem;padding:.6rem 1rem}
-.xlssheet{background:#fff;border:1px solid #ddd6fe;border-radius:6px;padding:.3rem .65rem;font-size:.78rem;color:#7c3aed;font-weight:600}
-.btn{background:linear-gradient(135deg,var(--P),var(--PD));color:#fff;border:none;padding:.9rem 2.5rem;font-size:1rem;font-weight:700;border-radius:12px;cursor:pointer;transition:all .3s;box-shadow:var(--sh);font-family:"Space Mono",monospace;text-transform:uppercase;letter-spacing:1px}
-.btn:hover:not(:disabled){transform:translateY(-2px);box-shadow:var(--shl)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btns{text-align:center;margin-top:1.8rem}
-.stat{margin-top:1.1rem;padding:.85rem 1rem;border-radius:9px;display:none;font-weight:500;font-size:.92rem}
-.stat.ok{background:rgba(16,185,129,.09);border:2px solid var(--S);color:var(--S);display:block}
-.stat.er{background:rgba(239,68,68,.09);border:2px solid var(--E);color:var(--E);display:block}
-.stat.in{background:rgba(37,99,235,.07);border:2px solid var(--P);color:var(--P);display:block}
-.pbar{width:100%;height:7px;background:var(--br);border-radius:10px;overflow:hidden;margin-top:.9rem;display:none}
-.pbar.on{display:block}
-.pfil{height:100%;background:linear-gradient(90deg,var(--P),var(--S));width:0%;transition:width .3s;border-radius:10px}
-hr.div{border:none;border-top:1px solid var(--br);margin:1.8rem 0}
-
-.tabs{display:flex;gap:0;border-bottom:2px solid var(--br);margin-bottom:2rem}
-.tab-btn{padding:.75rem 1.8rem;font-size:1rem;font-weight:700;cursor:pointer;border:none;background:none;color:var(--lt);border-bottom:3px solid transparent;margin-bottom:-2px;transition:all .2s;font-family:"DM Sans",sans-serif}
-.tab-btn:hover{color:var(--txt)}
-.tab-btn.tab-active{color:var(--P);border-bottom-color:var(--P)}
-.tab-btn.tab-fixer-btn.tab-active{color:#dc2626;border-bottom-color:#dc2626}
-
-@media(max-width:640px){body{padding:1rem}.card{padding:1.5rem}}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GSTR1 CSV Processor - Multi Format</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5393182989063953"
+         crossorigin="anonymous"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #2563eb; --primary-dark: #1e40af; --success: #10b981;
+            --danger: #ef4444; --bg: #f8fafc; --card: #ffffff; --text: #1e293b;
+            --text-light: #64748b; --border: #e2e8f0;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh; padding: 2rem; color: var(--text);
+        }
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        /* Ad Container Styles */
+        .ad-container {
+            background: var(--card);
+            border-radius: 15px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+        .ad-label {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .header { text-align: center; margin-bottom: 2rem; color: white; }
+        .header h1 {
+            font-size: 2.5rem; font-weight: 700; margin-bottom: 0.5rem;
+            font-family: 'Space Mono', monospace; text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .header p { font-size: 1.1rem; opacity: 0.95; }
+        .header .badge {
+            display: inline-block; background: rgba(255,255,255,0.2);
+            padding: 0.5rem 1rem; border-radius: 20px; margin-top: 1rem; font-size: 0.9rem;
+        }
+        .main-card {
+            background: var(--card); border-radius: 20px; padding: 2.5rem;
+            box-shadow: var(--shadow-lg); animation: slideUp 0.5s ease-out;
+        }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .step { margin-bottom: 2rem; }
+        .step-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        .step-number {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white; border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; font-weight: 700; font-family: 'Space Mono', monospace;
+            box-shadow: var(--shadow);
+        }
+        .step-title { font-size: 1.25rem; font-weight: 700; color: var(--text); }
+        
+        .format-selector {
+            display: flex; gap: 1rem; margin-bottom: 1.5rem;
+        }
+        .format-option {
+            flex: 1; padding: 1.5rem; border-radius: 12px; border: 2px solid var(--border);
+            background: var(--bg); cursor: pointer; transition: all 0.3s ease;
+            text-align: center;
+        }
+        .format-option:hover {
+            border-color: var(--primary); transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+        .format-option.active {
+            border-color: var(--primary); background: rgba(37, 99, 235, 0.1);
+            box-shadow: var(--shadow);
+        }
+        .format-option .format-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+        .format-option .format-name { font-weight: 700; font-size: 1.1rem; color: var(--text); }
+        .format-option .format-desc { font-size: 0.85rem; color: var(--text-light); margin-top: 0.25rem; }
+        
+        .upload-zone {
+            border: 3px dashed var(--border); border-radius: 15px; padding: 3rem 2rem;
+            text-align: center; background: var(--bg); transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .upload-zone:hover { border-color: var(--primary); background: rgba(37, 99, 235, 0.05); }
+        .upload-zone.dragover { border-color: var(--primary); background: rgba(37, 99, 235, 0.1); transform: scale(1.02); }
+        .upload-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.6; }
+        .upload-text { font-size: 1.1rem; color: var(--text); margin-bottom: 0.5rem; }
+        .upload-hint { font-size: 0.9rem; color: var(--text-light); }
+        input[type="file"] { display: none; }
+        .file-list {
+            margin-top: 1.5rem; display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;
+        }
+        .file-item {
+            background: var(--bg); padding: 1rem; border-radius: 10px;
+            display: flex; align-items: center; gap: 0.75rem; border: 1px solid var(--border);
+            transition: all 0.2s ease; animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .file-item:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+        .file-icon { font-size: 1.5rem; }
+        .file-info { flex: 1; min-width: 0; }
+        .file-name {
+            font-weight: 600; font-size: 0.9rem; color: var(--text);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .file-size { font-size: 0.75rem; color: var(--text-light); }
+        .file-remove {
+            background: none; border: none; color: var(--danger); cursor: pointer;
+            font-size: 1.2rem; padding: 0.25rem; border-radius: 5px; transition: all 0.2s ease;
+        }
+        .file-remove:hover { background: rgba(239, 68, 68, 0.1); }
+        .btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white; border: none; padding: 1rem 2.5rem; font-size: 1.1rem;
+            font-weight: 700; border-radius: 12px; cursor: pointer; transition: all 0.3s ease;
+            box-shadow: var(--shadow); font-family: 'Space Mono', monospace;
+            text-transform: uppercase; letter-spacing: 1px;
+        }
+        .btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+        .btn:active:not(:disabled) { transform: translateY(0); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-container { text-align: center; margin-top: 2rem; }
+        .status {
+            margin-top: 1.5rem; padding: 1rem; border-radius: 10px;
+            display: none; animation: slideDown 0.3s ease;
+        }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .status.success { background: rgba(16, 185, 129, 0.1); border: 2px solid var(--success); color: var(--success); display: block; }
+        .status.error { background: rgba(239, 68, 68, 0.1); border: 2px solid var(--danger); color: var(--danger); display: block; }
+        .status.info { background: rgba(37, 99, 235, 0.1); border: 2px solid var(--primary); color: var(--primary); display: block; }
+        .progress-bar { width: 100%; height: 8px; background: var(--border); border-radius: 10px; overflow: hidden; margin-top: 1rem; display: none; }
+        .progress-bar.active { display: block; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--success)); width: 0%; transition: width 0.3s ease; border-radius: 10px; }
+        
+        .footer-ad {
+            margin-top: 3rem;
+        }
+        
+        @media (max-width: 768px) {
+            body { padding: 1rem; }
+            .header h1 { font-size: 1.75rem; }
+            .main-card { padding: 1.5rem; }
+            .file-list { grid-template-columns: 1fr; }
+            .format-selector { flex-direction: column; }
+        }
+    </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="hdr">
-    <h1>&#128202; GSTR1 Processor</h1>
-    <p>Speqta Template &bull; Portal CSV &bull; Tally CSV &bull; Himalaya / Bootree / Other Software Excel</p>
-    <div class="badges">
-      <span class="bdg">&#128203; Portal CSV</span>
-      <span class="bdg">&#128188; Tally CSV</span>
-      <span class="bdg">&#128209; Other Software Excel</span>
-      <span class="bdg">&#128279; Auto-Combine</span>
-    </div>
-  </div>
-  <div class="card">
-    <!-- TABS -->
-    <div class="tabs">
-      <button class="tab-btn tab-active" id="tab-converter" onclick="switchTab('converter')">&#128202; Converter</button>
-      <button class="tab-btn tab-fixer-btn" id="tab-fixer" onclick="switchTab('fixer')">&#9889; GSTIN Fixer</button>
-    </div>
-    <div id="panel-converter">
-    <div class="step">
-      <div class="sth">
-        <div class="sn">1</div>
-        <div class="stl">Upload Files <span class="sub">(CSV or Excel from any software — all combine into one output)</span></div>
-      </div>
-      <div class="upz" id="upz" onclick="document.getElementById('fi').click()">
-        <div class="upi">&#128193;</div>
-        <div class="upt">Click or drag files here</div>
-        <div class="uph">CSV (Portal / Tally) &bull; Excel (Himalaya / Bootree / one_sale type) &bull; Multiple files auto-combine</div>
-      </div>
-      <input type="file" id="fi" accept=".csv,.xlsx,.xls" multiple />
-      <div id="grpCon"></div>
-    </div><!-- end step 1 -->
-    <!-- ═══ FIXER PANEL ═══ -->
-    
-
-    </div>
-    <hr class="div">
-    <div class="step">
-      <div class="sth"><div class="sn">2</div><div class="stl">Process &amp; Download</div></div>
-      <div class="btns">
-        <button class="btn" id="goBtn" disabled onclick="doProcess()">&#128640; Process &amp; Download</button>
-      </div>
-      <div class="pbar" id="pb"><div class="pfil" id="pf"></div></div>
-      <div class="stat" id="stat"></div>
-    </div><!-- end panel-converter -->
-
-
-    <div id="panel-fixer" style="display:none">
-      <div class="step">
-        <div class="sth">
-          <div class="sn" style="background:linear-gradient(135deg,#dc2626,#991b1b)">1</div>
-          <div class="stl">Upload Files <span class="sub">(GSTIN Error CSV + B2B Source + HSN files OR Speqta output)</span></div>
+    <div class="container">
+        <!-- Top Banner Ad -->
+        <div class="ad-container">
+            <div class="ad-label">Advertisement</div>
+            <ins class="adsbygoogle"
+                 style="display:block"
+                 data-ad-client="ca-pub-5393182989063953"
+                 data-ad-slot="1234567890"
+                 data-ad-format="auto"
+                 data-full-width-responsive="true"></ins>
+            <script>
+                 (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
         </div>
-        <div class="upz" id="fx-upz" onclick="document.getElementById('fx-fi').click()">
-          <div class="upi">&#9888;&#65039;</div>
-          <div class="upt">Click or drag files here</div>
-          <div class="uph">
-            <b>Required:</b> GSTIN Error CSV &bull;
-            <b>+ one of:</b> Speqta output Excel (already processed) OR B2B CSV/Excel + HSN files
-          </div>
+        
+        <div class="header">
+            <h1>📊 GSTR1 CSV Processor</h1>
+            <p>Supports Standard & Tally Excel formats!</p>
+            <div class="badge">✨ Date Fix Applied - 2026 Working!</div>
         </div>
-        <input type="file" id="fx-fi" accept=".csv,.xlsx,.xls" multiple />
-        <div id="fx-file-list" style="margin-top:1rem"></div>
-      </div>
-      
-      <!-- What happens box -->
-      <div style="background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.2);border-radius:10px;padding:1rem 1.2rem;margin:1rem 0;font-size:.85rem;color:var(--lt)">
-        <b style="color:#dc2626">What this fixer does:</b><br>
-        <span style="color:var(--txt)">&#10003;</span> Removes error GSTIN invoices from <b>B2B</b><br>
-        <span style="color:var(--txt)">&#10003;</span> Adds them to <b>B2CS</b> — all same-rate values summed → one row per %<br>
-        <span style="color:var(--txt)">&#10003;</span> <b>Reduces HSN B2B</b> (highest-taxable row first) + adds to <b>HSN B2C</b><br>
-        <span style="color:var(--txt)">&#10003;</span> Copies CDNR, export, nil/exempt, docs unchanged<br>
-        <span style="color:var(--txt)">&#10003;</span> Output: Speqta Excel where B2B + B2CS − CDNR = HSN total<br>
-        <b style="color:#92400e">&#9888; Required files: GSTIN Error CSV + B2B source + HSN_B2B CSV + HSN_B2C CSV (or one_sale Excel)</b>
-      </div>
-
-      <hr class="div">
-      <div class="step">
-        <div class="sth"><div class="sn" style="background:linear-gradient(135deg,#dc2626,#991b1b)">2</div><div class="stl">Fix &amp; Download</div></div>
-        <div class="btns">
-          <button class="btn" id="fx-btn" disabled onclick="runFixer()" style="background:linear-gradient(135deg,#dc2626,#991b1b)">&#9889; Fix &amp; Download</button>
+        
+        <div class="main-card">
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div class="step-title">Select Input Format</div>
+                </div>
+                <div class="format-selector">
+                    <div class="format-option active" id="standardFormat" onclick="selectFormat('standard')">
+                        <div class="format-icon">📋</div>
+                        <div class="format-name">Standard Format</div>
+                        <div class="format-desc">Default GSTR CSV files</div>
+                    </div>
+                    <div class="format-option" id="tallyFormat" onclick="selectFormat('tally')">
+                        <div class="format-icon">💼</div>
+                        <div class="format-name">Tally Excel</div>
+                        <div class="format-desc">Tally exported CSV files</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Middle Ad -->
+            <div class="ad-container">
+                <div class="ad-label">Advertisement</div>
+                <ins class="adsbygoogle"
+                     style="display:block"
+                     data-ad-client="ca-pub-5393182989063953"
+                     data-ad-slot="9876543210"
+                     data-ad-format="auto"
+                     data-full-width-responsive="true"></ins>
+                <script>
+                     (adsbygoogle = window.adsbygoogle || []).push({});
+                </script>
+            </div>
+            
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div class="step-title">Upload CSV Files</div>
+                </div>
+                <div class="upload-zone" id="csvZone" onclick="document.getElementById('csvInput').click()">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">Click or drag your CSV files here</div>
+                    <div class="upload-hint">Select all CSV files at once</div>
+                </div>
+                <input type="file" id="csvInput" accept=".csv" multiple />
+                <div class="file-list" id="csvList"></div>
+            </div>
+            
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div class="step-title">Process & Download</div>
+                </div>
+                <div class="btn-container">
+                    <button class="btn" id="mergeBtn" disabled onclick="mergeFiles()">🚀 Process & Download</button>
+                </div>
+                <div class="progress-bar" id="progressBar"><div class="progress-fill" id="progressFill"></div></div>
+                <div class="status" id="status"></div>
+            </div>
         </div>
-        <div class="pbar" id="fx-pb"><div class="pfil" id="fx-pf" style="background:linear-gradient(90deg,#dc2626,#f97316)"></div></div>
-        <div class="stat" id="fx-stat"></div>
-      </div>
+        
+        <!-- Footer Ad -->
+        <div class="ad-container footer-ad">
+            <div class="ad-label">Advertisement</div>
+            <ins class="adsbygoogle"
+                 style="display:block"
+                 data-ad-client="ca-pub-5393182989063953"
+                 data-ad-slot="5555555555"
+                 data-ad-format="auto"
+                 data-full-width-responsive="true"></ins>
+            <script>
+                 (adsbygoogle = window.adsbygoogle || []).push({});
+            </script>
+        </div>
     </div>
-  </div><!-- end card -->
-  </div>
-</div>
-<script>
-const TMPL = "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";
-
-// ─────────────────────────────────────────────
-// IS THIS AN EXCEL FILE?
-// ─────────────────────────────────────────────
-function isXlsx(fname){
-  const u=fname.toUpperCase();
-  return u.endsWith(".XLSX")||u.endsWith(".XLS");
-}
-
-// ─────────────────────────────────────────────
-// FOR CSV: filename → sheet key
-// ─────────────────────────────────────────────
-function csvSheetKey(fname){
-  const u=fname.toUpperCase().replace(/\s/g,"");
-  if(u.includes("HSN")&&u.includes("B2B")) return "hsn_b2b";
-  if(u.includes("HSN")&&u.includes("B2C")) return "hsn_b2c";
-  if(u.includes("HSN"))                    return "hsn_b2b";
-  if(u.includes("ATADJ"))  return "adv_tax_adjusted";
-  if(u.match(/^AT[._]/)||u==="AT.CSV"||(u.startsWith("AT")&&u.endsWith(".CSV")&&!u.includes("ATADJ"))) return "adv_tax";
-  if(u.includes("B2CL"))   return "b2cl";
-  if(u.includes("B2CS"))   return "b2cs";
-  if(u.includes("B2B"))    return "b2b";
-  if(u.includes("CDNUR"))  return "cdnur";
-  if(u.includes("CDNR"))   return "cdnr";
-  if(u.includes("EXEMP"))  return "nil_exempt";
-  if(u.includes("EXP"))    return "export";
-  if(u.includes("DOC"))    return "docs";
-  return null;
-}
-
-const LBL={
-  b2b:"B2B Invoices",b2cl:"B2CL (Large)",b2cs:"B2CS (Small)",
-  export:"Exports",nil_exempt:"Nil/Exempt/Non-GST",
-  cdnr:"CDNR",cdnur:"CDNUR",
-  adv_tax:"Advance Tax",adv_tax_adjusted:"Advance Adjusted",
-  hsn_b2b:"HSN–B2B",hsn_b2c:"HSN–B2C",docs:"Documents Issued"
-};
-
-// ─────────────────────────────────────────────
-// COLUMN MAPPINGS FOR CSV FILES
-// templateHeader → [csv column names to try]
-// ─────────────────────────────────────────────
-const COL_CSV={
-  b2b:{
-    "GSTIN/UIN":["GSTIN/UIN of Recipient","GSTIN/UIN"],
-    "Trade Name":["Receiver Name","Trade Name"],
-    "Invoice No":["Invoice Number","Invoice No"],
-    " Date of Invoice":["Invoice date","Date of Invoice"],
-    "Invoice Value":["Invoice Value"],
-    "GST%":["Rate","GST%"],
-    "Taxable Value":["Taxable Value"],
-    "CESS":["Cess Amount","CESS"],
-    "Place Of Supply":["Place Of Supply"],
-    "RCM Applicable":["Reverse Charge","RCM Applicable"],
-    "Invoice Type":["Invoice Type"],
-    "E-Commerce GSTIN":["E-Commerce GSTIN"]
-  },
-  b2cl:{
-    "Customer Name":["Receiver Name","Customer Name"],
-    "Invoice No":["Invoice Number","Invoice No"],
-    "Invoice Date":["Invoice date","Invoice Date"],
-    "Invoice Value":["Invoice Value"],
-    "GST%":["Rate","GST%"],
-    "Taxable Value":["Taxable Value"],
-    "CESS":["Cess Amount","CESS"],
-    "Place Of Supply":["Place Of Supply"],
-    "GSTIN of E-Commerce Operator":["E-Commerce GSTIN","GSTIN of E-Commerce Operator"]
-  },
-  b2cs:{
-    "GST%":["Rate","GST%"],
-    "Taxable Value":["Taxable Value"],
-    "CESS":["Cess Amount","CESS"],
-    "Place Of Supply":["Place Of Supply"],
-    "GSTIN of E-Commerce Operator":["E-Commerce GSTIN","GSTIN of E-Commerce Operator"]
-  },
-  export:{
-    "Type Of Export":["Export Type","Type Of Export"],
-    "Customer  Name":["Receiver Name","Customer Name"],
-    "Invoice No":["Invoice Number","Invoice No"],
-    "Invoice Date":["Invoice date","Invoice Date"],
-    "Invoice Value":["Invoice Value"],
-    "Port Code":["Port Code"],
-    "Shipping bill/ bill of export No":["Shipping Bill Number","Shipping bill/ bill of export No"],
-    "Shipping bill/ bill of export Date":["Shipping Bill Date","Shipping bill/ bill of export Date"],
-    "GST%":["Rate","GST%"],
-    "Taxable Value":["Taxable Value"],
-    "CESS":["Cess Amount","CESS"]
-  },
-  cdnr:{
-    "GSTIN/UIN":["GSTIN/UIN of Recipient","GSTIN/UIN"],
-    "Trade Name":["Receiver Name","Trade Name"],
-    "Type of note                (Dr/ Cr)":["Note Type","Document Type"],
-    "RCM":["Reverse Charge","RCM"],
-    "Dr./ Cr. No.":["Note Number","Note/Refund Voucher Number","Dr./ Cr. No."],
-    "Dr./Cr. Date":["Note Date","Note/Refund Voucher date","Dr./Cr. Date"],
-    "Invoice Type":["Note Supply Type","Invoice Type"],
-    "Dr./Cr. Value":["Note Value","Note/Refund Voucher Value","Dr./Cr. Value"],
-    "GST%":["Rate","GST%"],
-    "Taxable Value":["Taxable Value"],
-    "CESS":["Cess Amount","CESS"],
-    "Place of supply":["Place Of Supply","Place of supply"]
-  },
-  cdnur:{
-    "Name":["Receiver Name","Name"],
-    "Supply Type":["UR Type","Supply Type"],
-    "Type of note (Dr./ Cr.)":["Document Type","Note Type"],
-    "Dr./ Cr. Note No.":["Note/Refund Voucher Number","Note Number"],
-    "Dr./ Cr. Note Date":["Note/Refund Voucher date","Note Date"],
-    "Dr./Cr. Note Value":["Note/Refund Voucher Value","Note Value"],
-    "GST%":["Rate","GST%"],
-    "Taxable Value":["Taxable Value"],
-    "CESS":["Cess Amount","CESS"],
-    "Place of supply":["Place Of Supply","Place of supply"]
-  },
-  adv_tax:{
-    "Gross Advance Received":["Gross Advance Received"],
-    "GST%":["Rate","GST%"],
-    "IGST":["Integrated Tax Amount","IGST"],
-    "CGST":["Central Tax Amount","CGST"],
-    "SGST":["State/UT Tax Amount","SGST"],
-    "CESS":["Cess Amount","CESS"],
-    "Place of Supply":["Place of Supply","Place Of Supply"]
-  },
-  adv_tax_adjusted:{
-    "Advance adjusted":["Gross Advance Adjusted","Advance adjusted"],
-    "GST%":["Rate","GST%"],
-    "IGST":["Integrated Tax Amount","IGST"],
-    "CGST":["Central Tax Amount","CGST"],
-    "SGST":["State/UT Tax Amount","SGST"],
-    "CESS":["Cess Amount","CESS"],
-    "Place Of Supply":["Place Of Supply","Place of Supply"]
-  },
-  hsn_b2b:{
-    "Type":null,
-    "HSN":["HSN"],
-    "Description":["Description"],
-    "UQC":["UQC"],
-    "Total Quantity":["Total Quantity"],
-    "Total Value":["Total Value"],
-    "Rate":["Rate"],
-    "Total Taxable Value":["Taxable Value","Total Taxable Value"],
-    "IGST":["Integrated Tax Amount","IGST"],
-    "CGST":["Central Tax Amount","CGST"],
-    "SGST":["State/UT Tax Amount","SGST"],
-    "CESS":["Cess Amount","CESS"]
-  },
-  hsn_b2c:{
-    "Type":null,
-    "HSN":["HSN"],
-    "Description":["Description"],
-    "UQC":["UQC"],
-    "Total Quantity":["Total Quantity"],
-    "Total Value":["Total Value"],
-    "Rate":["Rate"],
-    "Total Taxable Value":["Taxable Value","Total Taxable Value"],
-    "IGST":["Integrated Tax Amount","IGST"],
-    "CGST":["Central Tax Amount","CGST"],
-    "SGST":["State/UT Tax Amount","SGST"],
-    "CESS":["Cess Amount","CESS"]
-  },
-  nil_exempt:{
-    "Description":["Description"],
-    "Nil Rated Supplies":["Nil Rated Supplies"],
-    "Exempted(other than nil rated/non GST supply)":["Exempted (other than nil rated/non GST supply)","Exempted(other than nil rated/non GST supply)"],
-    "Non-GST Supplies":["Non-GST supplies","Non-GST Supplies"]
-  }
-};
-
-// ─────────────────────────────────────────────
-// COLUMN MAPPINGS FOR EXCEL (other software)
-// src sheet name → {hrow(0-indexed), destKey, colMap{templateCol:[srcCols]}}
-// ─────────────────────────────────────────────
-const XLS_SHEETS={
-  "b2b":   { hrow:3, dest:"b2b",   col:{
-    "GSTIN/UIN":["GSTIN/UIN of Recipient"],
-    "Trade Name":["Receiver Name"],
-    "Invoice No":["Invoice Number"],
-    " Date of Invoice":["Invoice date"],
-    "Invoice Value":["Invoice Value"],
-    "GST%":["Rate"],
-    "Taxable Value":["Taxable Value"],
-    "CESS":["Cess Amount"],
-    "Place Of Supply":["Place Of Supply"],
-    "RCM Applicable":["Reverse Charge"],
-    "Invoice Type":["Invoice Type"],
-    "E-Commerce GSTIN":["E-Commerce GSTIN"]
-  }},
-  "b2cl":  { hrow:3, dest:"b2cl",  col:{
-    "Customer Name":["Receiver Name","Customer Name"],
-    "Invoice No":["Invoice Number"],
-    "Invoice Date":["Invoice date"],
-    "Invoice Value":["Invoice Value"],
-    "GST%":["Rate"],
-    "Taxable Value":["Taxable Value"],
-    "CESS":["Cess Amount"],
-    "Place Of Supply":["Place Of Supply"],
-    "GSTIN of E-Commerce Operator":["E-Commerce GSTIN"]
-  }},
-  "b2cs":  { hrow:3, dest:"b2cs",  col:{
-    "GST%":["Rate"],
-    "Taxable Value":["Taxable Value"],
-    "CESS":["Cess Amount"],
-    "Place Of Supply":["Place Of Supply"],
-    "GSTIN of E-Commerce Operator":["E-Commerce GSTIN"]
-  }},
-  "HSN(B2B)":{ hrow:0, dest:"hsn_b2b", col:{
-    "Type":null,
-    "HSN":["HSN"],
-    "Description":["Description"],
-    "UQC":["UQC"],
-    "Total Quantity":["Total Quantity"],
-    "Total Value":["Total Value"],
-    "Rate":["Rate"],
-    "Total Taxable Value":["Taxable Value"],
-    "IGST":["Integrated Tax Amount"],
-    "CGST":["Central Tax Amountt","Central Tax Amount"],
-    "SGST":["State Tax Amount","State/UT Tax Amount"],
-    "CESS":["Cess Amount"]
-  }},
-  "HSN(B2C)":{ hrow:0, dest:"hsn_b2c", col:{
-    "Type":null,
-    "HSN":["HSN"],
-    "Description":["Description"],
-    "UQC":["UQC"],
-    "Total Quantity":["Total Quantity"],
-    "Total Value":["Total Value"],
-    "Rate":["Rate"],
-    "Total Taxable Value":["Taxable Value"],
-    "IGST":["Integrated Tax Amount"],
-    "CGST":["Central Tax Amountt","Central Tax Amount"],
-    "SGST":["State Tax Amount","State/UT Tax Amount"],
-    "CESS":["Cess Amount"]
-  }},
-  "docs":  { hrow:3, dest:"docs",  col:{
-    "Type of Document":["Nature of Document","Type of Document"],
-    "Series From":["Sr.No.From","Series From"],
-    "Series To":["Sr.No.To","Series To"],
-    "Total Number":["Total Number"],
-    "Cancelled":["Cancelled"]
-  }},
-  "exemp": { hrow:3, dest:"nil_exempt", col:{
-    "Description":["Description"],
-    "Nil Rated Supplies":["Nil Rated Supplies"],
-    "Exempted(other than nil rated/non GST supply)":["Exempted(other than nil rated/non GST supply)","Exempted (other than nil rated/non GST supply)"],
-    "Non-GST Supplies":["Non-GST Supplies","Non-GST supplies"]
-  }},
-  "cdnr":  { hrow:3, dest:"cdnr",  col:{
-    "GSTIN/UIN":["GSTIN/UIN of Recipient"],
-    "Trade Name":["Receiver Name"],
-    "Type of note                (Dr/ Cr)":["Document Type","Note Type"],
-    "RCM":["Reverse Charge"],
-    "Dr./ Cr. No.":["Note/Refund Voucher Number","Note Number"],
-    "Dr./Cr. Date":["Note/Refund Voucher date","Note Date"],
-    "Invoice Type":["Note Supply Type","Invoice Type"],
-    "Dr./Cr. Value":["Note/Refund Voucher Value","Note Value"],
-    "GST%":["Rate"],
-    "Taxable Value":["Taxable Value"],
-    "CESS":["Cess Amount"],
-    "Place of supply":["Place Of Supply"]
-  }}
-};
-
-// Sheets to read from xlsx (in order B2B before B2C for HSN)
-const XLS_READ_ORDER=["b2b","b2cl","b2cs","HSN(B2B)","HSN(B2C)","docs","exemp","cdnr"];
-
-// ─────────────────────────────────────────────
-// FILE STORE + UI
-// ─────────────────────────────────────────────
-let files={};
-const upz=document.getElementById("upz");
-["dragenter","dragover","dragleave","drop"].forEach(e=>upz.addEventListener(e,ev=>{ev.preventDefault();ev.stopPropagation();}));
-["dragenter","dragover"].forEach(e=>upz.addEventListener(e,()=>upz.classList.add("over")));
-["dragleave","drop"].forEach(e=>upz.addEventListener(e,()=>upz.classList.remove("over")));
-upz.addEventListener("drop",ev=>addFiles(ev.dataTransfer.files));
-document.getElementById("fi").addEventListener("change",ev=>{addFiles(ev.target.files);ev.target.value="";});
-
-function addFiles(list){Array.from(list).forEach(f=>{files[f.name]=f;});render();updBtn();}
-function rmFile(k){delete files[k];render();updBtn();}
-function updBtn(){document.getElementById("goBtn").disabled=!Object.keys(files).length;}
-
-function render(){
-  const con=document.getElementById("grpCon");
-  const keys=Object.keys(files);
-  if(!keys.length){con.innerHTML="";return;}
-
-  // Separate xlsx files from CSV files
-  const xlsFiles=keys.filter(k=>isXlsx(k));
-  const csvKeys=keys.filter(k=>!isXlsx(k));
-
-  const grps={},unrec=[];
-  csvKeys.forEach(k=>{const sk=csvSheetKey(k);if(!sk)unrec.push(k);else{if(!grps[sk])grps[sk]=[];grps[sk].push(k);}});
-
-  let h='<div class="sgroups">';
-
-  // Show Excel files (each gets its own block showing all sheets)
-  xlsFiles.forEach(k=>{
-    const sheetList=Object.keys(XLS_SHEETS).map(s=>`<span class="xlssheet">${s}</span>`).join("");
-    h+=`<div class="xlsgrp"><div class="xlsgh"><span class="xbdg">&#128209; EXCEL</span><span class="sgttl" style="color:#7c3aed;font-weight:700">${k}</span><span class="csz" style="color:#7c3aed">${fmtSz(files[k].size)}</span><button class="crm" onclick="rmFile(${JSON.stringify(k)})">&#215;</button></div><div class="xlssheets">${sheetList}</div></div>`;
-  });
-
-  // Show CSV files grouped by sheet
-  for(const[sk,ks]of Object.entries(grps)){
-    const lbl=LBL[sk]||sk;
-    const ctag=ks.length>1?`<span class="ctag">&#128279; ${ks.length} – combine</span>`:"";
-    const chips=ks.map(k=>`<div class="chip"><span class="csvtag">CSV</span><span>${k}</span><span class="csz">${fmtSz(files[k].size)}</span><button class="crm" onclick="rmFile(${JSON.stringify(k)})">&#215;</button></div>`).join("");
-    h+=`<div class="sgrp"><div class="sgh"><span class="sbdg">${sk}</span><span class="sgttl">${lbl}</span>${ctag}</div><div class="sgf">${chips}</div></div>`;
-  }
-  if(unrec.length){
-    const chips=unrec.map(k=>`<div class="chip"><span>&#9888;</span><span>${k}</span><button class="crm" onclick="rmFile(${JSON.stringify(k)})">&#215;</button></div>`).join("");
-    h+=`<div class="unrec"><div class="urt">&#9888; Unrecognised – skipped</div><div style="display:flex;flex-wrap:wrap;gap:.5rem">${chips}</div></div>`;
-  }
-  h+="</div>";
-  con.innerHTML=h;
-}
-function fmtSz(b){if(b<1024)return b+"B";if(b<1048576)return(b/1024).toFixed(1)+"KB";return(b/1048576).toFixed(1)+"MB";}
-
-// ─────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────
-function trimAll(o){const r={};for(const[k,v]of Object.entries(o))r[k]=typeof v==="string"?v.trim():String(v==="null"||v===null||v===undefined?"":v).trim();return r;}
-function cleanPos(v){return v?v.toString().trim().replace(/^\d+-\s*/,"").trim():"";}
-function readText(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(f);});}
-function readBuf(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsArrayBuffer(f);});}
-
-function parseCSV(text){
-  const lines=text.trim().split(/\r?\n/);
-  if(lines.length<2)return[];
-  function pl(line){const res=[];let cur="",q=false;for(const c of line){if(c==='"'){q=!q;}else if(c===","&&!q){res.push(cur.trim());cur="";}else cur+=c;}res.push(cur.trim());return res;}
-  const hdrs=pl(lines[0]);
-  const rows=[];
-  for(let i=1;i<lines.length;i++){
-    if(!lines[i].trim())continue;
-    const v=pl(lines[i]);const row={};hdrs.forEach((h,idx)=>{row[h]=v[idx]||"";});rows.push(row);
-  }
-  return rows;
-}
-
-// Read rows from an xlsx worksheet given 0-indexed header row
-function xlsxSheetRows(ws, hrow0){
-  const range=XLSX.utils.decode_range(ws["!ref"]||"A1");
-  const hdrs=[];
-  for(let c=range.s.c;c<=range.e.c;c++){
-    const cell=ws[XLSX.utils.encode_cell({r:hrow0,c})];
-    hdrs.push(cell&&cell.v!=null?cell.v.toString().trim():"");
-  }
-  const rows=[];
-  for(let r=hrow0+1;r<=range.e.r;r++){
-    const row={};let hasData=false;
-    hdrs.forEach((h,ci)=>{
-      const cell=ws[XLSX.utils.encode_cell({r,c:range.s.c+ci})];
-      const v=cell&&cell.v!=null?cell.v.toString().trim():"";
-      row[h]=v;
-      if(v&&v!=="0"&&h)hasData=true;
-    });
-    if(hasData)rows.push(row);
-  }
-  return rows;
-}
-
-function normDate(v){
-  if(!v)return"";const s=v.toString().trim();
-  const m=s.match(/(\d{1,2})[\-\/]([A-Za-z]{3})[\-\/](\d{2,4})/);
-  if(m){const mo={Jan:"01",Feb:"02",Mar:"03",Apr:"04",May:"05",Jun:"06",Jul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12"};
-    const yr=m[3].length===2?"20"+m[3]:m[3];return m[1].padStart(2,"0")+"-"+mo[m[2]]+"-"+yr;}
-  return s;
-}
-function normRCM(v){const u=(v||"").toString().trim().toUpperCase();return u==="Y"||u==="YES"?"Yes":u==="N"||u==="NO"?"No":v;}
-function normNoteType(v){
-  const u=(v||"").toString().trim().toUpperCase();
-  if(u==="C"||u==="CREDIT NOTE"||u==="CR")return"Credit Note";
-  if(u==="D"||u==="DEBIT NOTE"||u==="DR") return"Debit Note";
-  if(u==="R"||u==="REFUND VOUCHER")        return"Refund Voucher";
-  return v;
-}
-function normInvType(v){return(v||"").toString().replace(/ B2B$/i,"").replace(/ B2C$/i,"").trim();}
-
-// Apply transforms to a value based on template column name
-function applyTransform(tc,val){
-  if(tc.toLowerCase().includes("place"))      return cleanPos(val);
-  if(tc.toLowerCase().includes("date"))        return normDate(val);
-  if(tc==="RCM Applicable"||tc==="RCM")        return normRCM(val);
-  if(tc==="Invoice Type")                      return normInvType(val);
-  if(tc.toLowerCase().includes("type of note")||tc==="Document Type") return normNoteType(val);
-  if((tc==="GST%"||tc==="Rate")&&val==="")     return"0";
-  return val;
-}
-
-// Map a flat row object using a colMap {templateCol:[srcCols]|null}
-function applyColMap(row, colMap, typeInject){
-  const out={};
-  for(const[tc,srcs]of Object.entries(colMap)){
-    let val="";
-    if(srcs===null){
-      val=typeInject||"";  // inject B2B/B2C for HSN Type col
-    } else {
-      for(const s of srcs){
-        const v=(row[s]!==undefined)?row[s].toString().trim():"";
-        if(v&&v!=="undefined"){val=v;break;}
-      }
-    }
-    out[tc]=applyTransform(tc,val);
-  }
-  return out;
-}
-
-// ─────────────────────────────────────────────
-// SPECIAL PROCESSORS
-// ─────────────────────────────────────────────
-function processDocs(rows){
-  return rows.map(row=>{
-    const docType=(row["Nature of Document"]||row["Type of Document"]||"").toString().trim();
-    const serFrom=(row["Sr.No.From"]||row["Sr. No. From"]||row["Series From"]||"").toString().trim();
-    const serTo  =(row["Sr.No.To"]  ||row["Sr. No. To"]  ||row["Series To"]  ||"").toString().trim();
-    const tot    =parseFloat(row["Total Number"])||0;
-    const can    =parseFloat(row["Cancelled"])||0;
-    if(!docType&&!tot)return null;
-    return{"Type of Document":docType,"Series From":serFrom,"Series To":serTo,
-           "Total Number":tot||"","Cancelled":can||"","Net Issued":(tot-can)||""};
-  }).filter(r=>r!==null);
-}
-
-function processNilExempt(ws,rows){
-  if(!rows.length)return;
-  const range=XLSX.utils.decode_range(ws["!ref"]||"A1");
-  const thdrs=[];
-  for(let c=0;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r:0,c})];thdrs.push(cell&&cell.v!=null?cell.v.toString():"");}
-  rows.forEach(csvRow=>{
-    const desc=(csvRow["Description"]||"").trim().toLowerCase();
-    if(!desc)return;
-    for(let r=1;r<=range.e.r;r++){
-      const dc=ws[XLSX.utils.encode_cell({r,c:0})];
-      const tdesc=dc&&dc.v!=null?dc.v.toString().trim().toLowerCase():"";
-      if(tdesc===desc||tdesc.replace(/\s+/g," ")===desc.replace(/\s+/g," ")){
-        thdrs.forEach((th,ci)=>{
-          if(!th||ci===0)return;
-          let val="";
-          const srcs=COL_CSV.nil_exempt[th];
-          if(srcs){for(const s of srcs){if(csvRow[s]!==undefined&&csvRow[s]!==""){val=csvRow[s];break;}}}
-          const addr=XLSX.utils.encode_cell({r,c:ci});
-          const n=parseFloat(val.toString().replace(/,/g,""));
-          ws[addr]=isNaN(n)?{t:"s",v:val.toString()}:{t:"n",v:n};
-        });break;
-      }
-    }
-  });
-}
-
-// ─────────────────────────────────────────────
-// WRITE ROWS INTO TEMPLATE SHEET (append)
-// ─────────────────────────────────────────────
-function writeRows(ws,rows){
-  if(!rows||!rows.length)return;
-  const range=XLSX.utils.decode_range(ws["!ref"]||"A1");
-  const thdrs=[];
-  for(let c=range.s.c;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r:0,c})];thdrs.push(cell&&cell.v!=null?cell.v.toString():"");}
-  let writeRow=1;
-  for(let r=1;r<=range.e.r;r++){
-    let has=false;
-    for(let c=range.s.c;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r,c})];if(cell&&cell.v!=null&&cell.v!==""){has=true;break;}}
-    if(has)writeRow=r+1;
-  }
-  rows.forEach((row,ri)=>{
-    const er=writeRow+ri;
-    thdrs.forEach((th,ci)=>{
-      if(!th)return;
-      const val=row[th]!==undefined?row[th]:"";
-      const addr=XLSX.utils.encode_cell({r:er,c:range.s.c+ci});
-      if(val===""||val===undefined||val===null){ws[addr]={t:"s",v:""};return;}
-      const sv=val.toString().trim();
-      const n=parseFloat(sv.replace(/,/g,""));
-      if(!isNaN(n)&&sv.match(/^-?\d+\.?\d*$/)&&sv!=="")ws[addr]={t:"n",v:n};
-      else ws[addr]={t:"s",v:sv};
-    });
-  });
-  range.e.r=Math.max(range.e.r,writeRow+rows.length-1);
-  ws["!ref"]=XLSX.utils.encode_range(range);
-}
-
-// ─────────────────────────────────────────────
-// MAIN PROCESS
-// ─────────────────────────────────────────────
-const SHEET_NAME={
-  b2b:"b2b",b2cl:"b2cl",b2cs:"b2cs",export:"export",
-  nil_exempt:"Nil_exempt_NonGST",cdnr:"cdnr",cdnur:"cdnur",
-  adv_tax:"adv_tax",adv_tax_adjusted:"adv_tax_adjusted",
-  hsn_b2b:"hsn",hsn_b2c:"hsn",docs:"Docs_issued"
-};
-const PROC_ORDER=["b2b","b2cl","b2cs","export","nil_exempt","cdnr","cdnur","adv_tax","adv_tax_adjusted","hsn_b2b","hsn_b2c","docs"];
-
-async function doProcess(){
-  try{
-    setStat("Loading template...","in");setP(8);
-    let binary;
-    try{binary=Uint8Array.from(atob(TMPL),c=>c.charCodeAt(0));}
-    catch(e){throw new Error("Template decode error: "+e.message);}
-    const wb=XLSX.read(binary,{type:"array",cellStyles:true});
-    setP(18);
-
-    const data={};  // destKey → rows[]
-    const fileKeys=Object.keys(files);
-    const xlsxFiles=fileKeys.filter(k=>isXlsx(k));
-    const csvFiles =fileKeys.filter(k=>!isXlsx(k));
-
-    // ── PROCESS EXCEL FILES (Himalaya / Bootree / one_sale type) ──
-    for(let i=0;i<xlsxFiles.length;i++){
-      const fname=xlsxFiles[i];
-      setStat("Reading Excel: "+fname+"...","in");
-      const buf=await readBuf(files[fname]);
-      const srcWb=XLSX.read(buf,{type:"arraybuffer"});
-
-      for(const srcSn of XLS_READ_ORDER){
-        const cfg=XLS_SHEETS[srcSn];
-        if(!cfg)continue;
-        const srcWs=srcWb.Sheets[srcSn];
-        if(!srcWs)continue;
-
-        const dest=cfg.dest;
-        if(!data[dest])data[dest]=[];
-
-        if(dest==="docs"){
-          const rows=xlsxSheetRows(srcWs,cfg.hrow);
-          data[dest].push(...processDocs(rows));
-        } else if(dest==="nil_exempt"){
-          // store for special write later
-          const rows=xlsxSheetRows(srcWs,cfg.hrow);
-          data[dest]=(data[dest]||[]).concat(rows.filter(r=>(r["Description"]||"").trim()));
-        } else {
-          const htype=dest==="hsn_b2b"?"B2B":dest==="hsn_b2c"?"B2C":null;
-          const rows=xlsxSheetRows(srcWs,cfg.hrow);
-          const mapped=rows.map(r=>{
-            const out=applyColMap(r,cfg.col,htype);
-            return out;
-          }).filter(r=>{
-            // For HSN: must have HSN code; for others: at least one non-empty value
-            if(dest==="hsn_b2b"||dest==="hsn_b2c") return(r["HSN"]||"").trim()!=="";
-            return Object.values(r).some(v=>v!=="");
-          });
-          data[dest].push(...mapped);
+    <script>
+        const EMBEDDED_TEMPLATE_BASE64 = `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`;
+        let csvFiles = {};
+        let selectedFormat = 'standard';
+        
+        function selectFormat(format) {
+            selectedFormat = format;
+            document.getElementById('standardFormat').classList.remove('active');
+            document.getElementById('tallyFormat').classList.remove('active');
+            document.getElementById(format + 'Format').classList.add('active');
         }
-      }
-      setP(18+(i+1)/xlsxFiles.length*25);
-    }
-
-    // ── PROCESS CSV FILES ──
-    for(let i=0;i<csvFiles.length;i++){
-      const fname=csvFiles[i];
-      const sk=csvSheetKey(fname);
-      if(!sk){setP(44+(i+1)/csvFiles.length*25);continue;}
-      setStat("Reading CSV: "+fname+"...","in");
-      const txt=await readText(files[fname]);
-      let rows=parseCSV(txt).map(trimAll);
-      if(!rows.length){setP(44+(i+1)/csvFiles.length*25);continue;}
-      if(!data[sk])data[sk]=[];
-
-      if(sk==="docs"){
-        data[sk].push(...processDocs(rows));
-      } else if(sk==="hsn_b2b"||sk==="hsn_b2c"){
-        const htype=sk==="hsn_b2b"?"B2B":"B2C";
-        const mapped=rows.map(r=>{
-          const out=applyColMap(r,COL_CSV[sk],htype);
-          out["Type"]=htype;
-          return out;
-        }).filter(r=>(r["HSN"]||"").trim()!=="");
-        data[sk].push(...mapped);
-      } else if(sk==="nil_exempt"){
-        data[sk]=(data[sk]||[]).concat(rows.filter(r=>(r["Description"]||"").trim()));
-      } else {
-        const mapped=rows.map(r=>applyColMap(r,COL_CSV[sk],null)).filter(r=>Object.values(r).some(v=>v!==""));
-        data[sk].push(...mapped);
-      }
-      setP(44+(i+1)/csvFiles.length*25);
-    }
-
-    // ── WRITE TO TEMPLATE ──
-    setStat("Writing to template...","in");setP(72);
-    const writeKeys=PROC_ORDER.filter(k=>data[k]&&data[k].length);
-    for(let si=0;si<writeKeys.length;si++){
-      const sk=writeKeys[si];
-      const sn=SHEET_NAME[sk];
-      if(!sn)continue;
-      const ws=wb.Sheets[sn];
-      if(!ws){console.warn("Missing sheet:",sn);continue;}
-      if(sk==="nil_exempt") processNilExempt(ws,data[sk]);
-      else writeRows(ws,data[sk]);
-      setP(72+((si+1)/writeKeys.length)*22);
-    }
-
-    setP(96);setStat("Generating Excel...","in");
-    const out=XLSX.write(wb,{bookType:"xlsx",type:"array",cellStyles:true});
-    const blob=new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
-    const ts=new Date().toISOString().replace(/[:.]/g,"-").slice(0,-5);
-    saveAs(blob,"GSTR1_Speqta_"+ts+".xlsx");
-    setP(100);setStat("\u2705 Done! Excel downloaded.","ok");
-    setTimeout(clearP,3000);
-  }catch(e){
-    console.error(e);setStat("\u274C Error: "+e.message,"er");clearP();
-  }
-}
-
-function setStat(m,t){const s=document.getElementById("stat");s.textContent=m;s.className="stat "+t;}
-function setP(v){document.getElementById("pb").classList.add("on");document.getElementById("pf").style.width=v+"%";}
-function clearP(){document.getElementById("pb").classList.remove("on");document.getElementById("pf").style.width="0%";}
-
-// ═══════════════════════════════════════════════════════
-//  TAB SWITCHING
-// ═══════════════════════════════════════════════════════
-function switchTab(tab) {
-  document.getElementById('tab-converter').classList.toggle('tab-active', tab==='converter');
-  document.getElementById('tab-fixer').classList.toggle('tab-active', tab==='fixer');
-  document.getElementById('panel-converter').style.display = tab==='converter'?'block':'none';
-  document.getElementById('panel-fixer').style.display    = tab==='fixer'?'block':'none';
-}
-
-// ═══════════════════════════════════════════════════════
-//  FIXER STATE
-// ═══════════════════════════════════════════════════════
-let fxFiles = { error: null, b2b: [], hsn_b2b: [], hsn_b2c: [], speqta: null };
-
-const fxZone = document.getElementById('fx-upz');
-['dragenter','dragover','dragleave','drop'].forEach(e=>fxZone.addEventListener(e,ev=>{ev.preventDefault();ev.stopPropagation();}));
-['dragenter','dragover'].forEach(e=>fxZone.addEventListener(e,()=>fxZone.classList.add('over')));
-['dragleave','drop'].forEach(e=>fxZone.addEventListener(e,()=>fxZone.classList.remove('over')));
-fxZone.addEventListener('drop', ev=>fxAddFiles(ev.dataTransfer.files));
-document.getElementById('fx-fi').addEventListener('change', ev=>{fxAddFiles(ev.target.files);ev.target.value='';});
-
-function fxAddFiles(list) {
-  Array.from(list).forEach(f => {
-    const u = f.name.toUpperCase().replace(/\s/g,'');
-    // Classify file
-    if (u.includes('GSTINVALIDATE') || u.includes('ERROR') || u.includes('GSTIN_ERR') ||
-        (u.includes('GSTIN') && (u.endsWith('.CSV')||u.endsWith('.XLSX')))) {
-      fxFiles.error = f;
-    } else if (u.endsWith('.XLSX') || u.endsWith('.XLS')) {
-      // Could be Speqta output or one_sale type (contains HSN sheets)
-      if (u.includes('SPEQTA') || u.includes('GSTR1') || u.includes('FIXED')) {
-        fxFiles.speqta = f;
-      } else {
-        // Source Excel (one_sale / Himalaya / Bootree) — has B2B + HSN sheets
-        fxFiles.b2b.push(f);
-        fxFiles.hsn_b2b.push(f); // same file has HSN(B2B) sheet
-        fxFiles.hsn_b2c.push(f); // same file has HSN(B2C) sheet
-      }
-    } else if (u.includes('HSN') && u.includes('B2B')) {
-      fxFiles.hsn_b2b.push(f);
-    } else if (u.includes('HSN') && u.includes('B2C')) {
-      fxFiles.hsn_b2c.push(f);
-    } else if (u.includes('B2B')) {
-      fxFiles.b2b.push(f);
-    }
-  });
-  fxRender();
-  document.getElementById('fx-btn').disabled = !fxFiles.error;
-}
-function fxRmFile(category, idx) {
-  if (idx === undefined) fxFiles[category] = null;
-  else fxFiles[category].splice(idx, 1);
-  fxRender();
-  document.getElementById('fx-btn').disabled = !fxFiles.error;
-}
-
-function fxRender() {
-  const con = document.getElementById('fx-file-list');
-  let h = '';
-  const mkChip = (f, cat, idx) => {
-    const rm = idx===undefined ? `fxRmFile('${cat}')` : `fxRmFile('${cat}',${idx})`;
-    return `<div class="chip"><span class="csvtag">${f.name.toUpperCase().endsWith('.CSV')?'CSV':'XLS'}</span><span>${f.name}</span><span class="csz">${fmtSz(f.size)}</span><button class="crm" onclick="${rm}">&#215;</button></div>`;
-  };
-  if (fxFiles.error) {
-    h += `<div class="sgrp"><div class="sgh"><span class="sbdg" style="background:#dc2626">ERRORS</span><span class="sgttl">GSTIN Error File</span></div><div class="sgf">${mkChip(fxFiles.error,'error')}</div></div>`;
-  }
-  if (fxFiles.speqta) {
-    h += `<div class="sgrp"><div class="sgh"><span class="xbdg">SPEQTA OUTPUT</span><span class="sgttl">Speqta GSTR1 Excel</span></div><div class="sgf">${mkChip(fxFiles.speqta,'speqta')}</div></div>`;
-  }
-  if (fxFiles.b2b.length) {
-    h += `<div class="sgrp"><div class="sgh"><span class="sbdg">B2B</span><span class="sgttl">B2B Source Files</span></div><div class="sgf">${fxFiles.b2b.map((f,i)=>mkChip(f,'b2b',i)).join('')}</div></div>`;
-  }
-  if (fxFiles.hsn_b2b.length||fxFiles.hsn_b2c.length) {
-    h += `<div class="sgrp"><div class="sgh"><span class="sbdg">HSN</span><span class="sgttl">HSN Files</span></div><div class="sgf">${[...fxFiles.hsn_b2b.map((f,i)=>mkChip(f,'hsn_b2b',i)),...fxFiles.hsn_b2c.map((f,i)=>mkChip(f,'hsn_b2c',i))].join('')}</div></div>`;
-  }
-  if (!h) h = '<p style="color:var(--color-text-secondary);font-size:.88rem;padding:.5rem">No files uploaded yet</p>';
-  con.innerHTML = h;
-}
-
-// ─── Parse helpers ───
-function fxReadText(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(f);});}
-function fxReadBuf(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsArrayBuffer(f);});}
-
-async function parseErrorFile(f) {
-  const txt = await fxReadText(f);
-  const lines = txt.trim().split(/\r?\n/);
-  function pl(line){const res=[];let cur='',q=false;for(const c of line){if(c==='"'){q=!q;}else if(c===','&&!q){res.push(cur.trim());cur='';}else cur+=c;}res.push(cur.trim());return res;}
-  const hdrs = pl(lines[0]);
-  const rows = [];
-  for(let i=1;i<lines.length;i++){if(!lines[i].trim())continue;const v=pl(lines[i]);const row={};hdrs.forEach((h,idx)=>{row[h]=v[idx]||'';});rows.push(row);}
-  // Extract unique GSTINs
-  const gstins = new Set();
-  const info = {};
-  for(const r of rows){
-    const g = (r['GSTIN']||r['GSTIN/UIN']||r['gstin']||Object.values(r)[1]||'').trim();
-    if(g){gstins.add(g);info[g]={name:r['Name']||r['name']||'',status:r['Status']||r['status']||''};}
-  }
-  return {gstins, info};
-}
-
-async function parseB2bFile(f) {
-  const u = f.name.toUpperCase();
-  if(u.endsWith('.XLSX')||u.endsWith('.XLS')){
-    const buf = await fxReadBuf(f);
-    const srcWb = XLSX.read(buf,{type:'arraybuffer'});
-    const ws = srcWb.Sheets['b2b'];
-    if(!ws) return [];
-    // Detect header row
-    const range = XLSX.utils.decode_range(ws['!ref']||'A1');
-    let hrow = 0;
-    for(let r=0;r<=Math.min(5,range.e.r);r++){
-      const v = ws[XLSX.utils.encode_cell({r,c:0})];
-      if(v&&v.v&&String(v.v).trim().toUpperCase().includes('GSTIN')){hrow=r;break;}
-    }
-    return xlsxSheetRows(ws,hrow).map(r=>{
-      return {
-        gstin: (r['GSTIN/UIN of Recipient']||r['GSTIN/UIN']||'').trim(),
-        tradeName: r['Receiver Name']||r['Trade Name']||'',
-        invoiceNo: r['Invoice Number']||r['Invoice No']||'',
-        date: r['Invoice date']||r['Date of Invoice']||'',
-        invoiceValue: parseFloat(r['Invoice Value'])||0,
-        rate: parseFloat(r['Rate']||r['GST%'])||0,
-        taxable: parseFloat(r['Taxable Value'])||0,
-        cess: parseFloat(r['Cess Amount']||r['CESS'])||0,
-        pos: cleanPos(r['Place Of Supply']||'Karnataka'),
-        rcm: r['Reverse Charge']||r['RCM Applicable']||'No',
-        invType: (r['Invoice Type']||'Regular').replace(/ B2B$/i,'').replace(/ B2C$/i,'').trim(),
-        ecom: r['E-Commerce GSTIN']||''
-      };
-    });
-  } else {
-    const txt = await fxReadText(f);
-    const rows = parseCSV(txt).map(trimAll);
-    return rows.map(r=>({
-      gstin: (r['GSTIN/UIN of Recipient']||r['GSTIN/UIN']||'').trim(),
-      tradeName: r['Receiver Name']||r['Trade Name']||'',
-      invoiceNo: r['Invoice Number']||r['Invoice No']||'',
-      date: normDate(r['Invoice date']||r['Date of Invoice']||''),
-      invoiceValue: parseFloat(r['Invoice Value'])||0,
-      rate: parseFloat(r['Rate']||r['GST%'])||0,
-      taxable: parseFloat(r['Taxable Value'])||0,
-      cess: parseFloat(r['Cess Amount']||r['CESS'])||0,
-      pos: cleanPos(r['Place Of Supply']||'Karnataka'),
-      rcm: normRCM(r['Reverse Charge']||r['RCM Applicable']||'No'),
-      invType: normInvType(r['Invoice Type']||'Regular'),
-      ecom: r['E-Commerce GSTIN']||''
-    }));
-  }
-}
-
-async function parseHsnFile(f, htype) {
-  const u = f.name.toUpperCase();
-  let rows = [];
-  if(u.endsWith('.XLSX')||u.endsWith('.XLS')){
-    const buf = await fxReadBuf(f);
-    const srcWb = XLSX.read(buf,{type:'arraybuffer'});
-    // Find the right sheet: for one_sale type it's "HSN(B2B)" or "HSN(B2C)"
-    // For speqta output it's "hsn" with a Type column
-    let ws = null;
-    let hrow = 0;
-    if(htype==='B2B'){
-      const wsName = srcWb.SheetNames.find(n=>n.toUpperCase().includes('HSN')&&n.toUpperCase().includes('B2B'));
-      if(wsName){ ws=srcWb.Sheets[wsName]; hrow=0; }
-    } else {
-      const wsName = srcWb.SheetNames.find(n=>n.toUpperCase().includes('HSN')&&n.toUpperCase().includes('B2C'));
-      if(wsName){ ws=srcWb.Sheets[wsName]; hrow=0; }
-    }
-    if(!ws) return [];
-    rows = xlsxSheetRows(ws, hrow);
-  } else {
-    const txt = await fxReadText(f);
-    rows = parseCSV(txt).map(trimAll);
-  }
-  return rows.map(r=>({
-    type: htype,
-    hsn: (r['HSN']||'').trim(),
-    desc: r['Description']||'',
-    uqc: r['UQC']||'',
-    qty: parseFloat(r['Total Quantity'])||0,
-    totalVal: parseFloat(r['Total Value'])||0,
-    rate: parseFloat(r['Rate'])||0,
-    taxable: parseFloat(r['Taxable Value']||r['Total Taxable Value'])||0,
-    igst: parseFloat(r['Integrated Tax Amount']||r['IGST'])||0,
-    cgst: parseFloat(r['Central Tax Amount']||r['Central Tax Amountt']||r['CGST'])||0,
-    sgst: parseFloat(r['State/UT Tax Amount']||r['State Tax Amount']||r['SGST'])||0,
-    cess: parseFloat(r['Cess Amount']||r['CESS'])||0,
-  })).filter(r=>r.hsn);
-}
-
-// Also parse HSN from Speqta output Excel
-function parseHsnFromSpeqta(ws) {
-  const range = XLSX.utils.decode_range(ws['!ref']||'A1');
-  const hdrs = [];
-  for(let c=range.s.c;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r:0,c})];hdrs.push(cell&&cell.v!=null?cell.v.toString():'');}
-  const rows=[];
-  for(let r=1;r<=range.e.r;r++){
-    const row={};let hasData=false;
-    hdrs.forEach((h,ci)=>{const cell=ws[XLSX.utils.encode_cell({r,c:range.s.c+ci})];const v=cell&&cell.v!=null?cell.v.toString().trim():'';row[h]=v;if(v)hasData=true;});
-    if(hasData)rows.push(row);
-  }
-  return rows.map(r=>({
-    type: r['Type']||'',
-    hsn: (r['HSN']||'').trim(),
-    desc: r['Description']||'',
-    uqc: r['UQC']||'',
-    qty: parseFloat(r['Total Quantity'])||0,
-    totalVal: parseFloat(r['Total Value'])||0,
-    rate: parseFloat(r['Rate'])||0,
-    taxable: parseFloat(r['Total Taxable Value'])||0,
-    igst: parseFloat(r['IGST'])||0,
-    cgst: parseFloat(r['CGST'])||0,
-    sgst: parseFloat(r['SGST'])||0,
-    cess: parseFloat(r['CESS'])||0,
-  })).filter(r=>r.hsn);
-}
-
-// ─── MAIN FIXER ───
-async function runFixer() {
-  const btn = document.getElementById('fx-btn');
-  btn.disabled = true;
-  try {
-    fxStat('Reading error file...','in'); fxP(8);
-
-    // 1. Parse error GSTINs
-    const {gstins: errorGstins, info: errorInfo} = await parseErrorFile(fxFiles.error);
-    fxStat(`Found ${errorGstins.size} error GSTINs...`,'in'); fxP(18);
-
-    // 2. Parse B2B data (from speqta output, or separate b2b files)
-    let allB2b = [];
-    if(fxFiles.speqta) {
-      const buf = await fxReadBuf(fxFiles.speqta);
-      const srcWb = XLSX.read(buf,{type:'arraybuffer'});
-      // Parse b2b sheet from speqta output
-      const ws = srcWb.Sheets['b2b'];
-      if(ws) {
-        const range = XLSX.utils.decode_range(ws['!ref']||'A1');
-        const hdrs = [];
-        for(let c=range.s.c;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r:0,c})];hdrs.push(cell&&cell.v!=null?cell.v.toString():'');}
-        for(let r=1;r<=range.e.r;r++){
-          const row={};let hasData=false;
-          hdrs.forEach((h,ci)=>{const cell=ws[XLSX.utils.encode_cell({r,c:range.s.c+ci})];const v=cell&&cell.v!=null?cell.v:'';row[h]=v;if(v!==''&&v!==null)hasData=true;});
-          if(hasData) allB2b.push({
-            gstin:(row['GSTIN/UIN']||'').toString().trim(),
-            tradeName:row['Trade Name']||'',
-            invoiceNo:row['Invoice No']||'',
-            date:row[' Date of Invoice']||row['Date of Invoice']||'',
-            invoiceValue:parseFloat(row['Invoice Value'])||0,
-            rate:parseFloat(row['GST%'])||0,
-            taxable:parseFloat(row['Taxable Value'])||0,
-            cess:parseFloat(row['CESS'])||0,
-            pos:(row['Place Of Supply']||'Karnataka').toString().trim(),
-            rcm:(row['RCM Applicable']||'No').toString(),
-            invType:(row['Invoice Type']||'Regular').toString(),
-            ecom:(row['E-Commerce GSTIN']||'').toString()
-          });
-        }
-      }
-    }
-    for(const f of fxFiles.b2b) {
-      const rows = await parseB2bFile(f);
-      allB2b.push(...rows);
-    }
-    if(!allB2b.length) throw new Error('No B2B data found. Please upload B2B CSV/Excel or Speqta output file.');
-    fxStat(`Loaded ${allB2b.length} B2B rows...`,'in'); fxP(30);
-
-    // 3. Split B2B into: keep (valid) and move (error GSTINs)
-    const keepB2b  = allB2b.filter(r => !errorGstins.has(r.gstin));
-    const moveRows = allB2b.filter(r =>  errorGstins.has(r.gstin));
-    if(!moveRows.length) {
-      fxStat(`⚠ None of the ${errorGstins.size} error GSTINs found in B2B data. Check if correct files uploaded.`,'er');
-      btn.disabled=false; return;
-    }
-    fxStat(`Moving ${moveRows.length} rows from B2B → B2CS...`,'in'); fxP(42);
-
-    // 4. Aggregate moved rows by Rate → B2CS rows (one per rate, summed)
-    const b2csByRate = {};
-    let movedTaxableByRate = {};  // track how much moved per rate
-    for(const r of moveRows) {
-      const rate = r.rate;
-      if(!b2csByRate[rate]) {
-        b2csByRate[rate] = {taxable:0, cess:0, pos:'Karnataka'};
-        movedTaxableByRate[rate] = 0;
-      }
-      b2csByRate[rate].taxable += r.taxable;
-      b2csByRate[rate].cess    += r.cess;
-      movedTaxableByRate[rate] += r.taxable;
-      // Use most common POS
-      if(r.pos && r.pos!=='Karnataka') b2csByRate[rate].pos = r.pos;
-    }
-
-    // 5. Parse HSN data
-    let hsnB2b = [], hsnB2c = [];
-    if(fxFiles.speqta) {
-      const buf = await fxReadBuf(fxFiles.speqta);
-      const srcWb = XLSX.read(buf,{type:'arraybuffer'});
-      const ws = srcWb.Sheets['hsn'];
-      if(ws) {
-        const all = parseHsnFromSpeqta(ws);
-        hsnB2b = all.filter(r=>r.type==='B2B');
-        hsnB2c = all.filter(r=>r.type==='B2C');
-      }
-    }
-    for(const f of fxFiles.hsn_b2b){const rows=await parseHsnFile(f,'B2B');hsnB2b.push(...rows);}
-    for(const f of fxFiles.hsn_b2c){const rows=await parseHsnFile(f,'B2C');hsnB2c.push(...rows);}
-    if(hsnB2b.length===0 && Object.keys(movedTaxableByRate).length>0){
-      // No B2B HSN data — fixer can't reduce B2B HSN
-      fxStat('⚠ No HSN B2B data found. Upload HSN_B2B_.CSV or the source Excel (one_sale) to enable HSN adjustment.','er');
-      btn.disabled=false; return;
-    }
-    fxStat(`Adjusting HSN: reducing ${hsnB2b.length} B2B rows, adding to ${hsnB2c.length} B2C rows...`,'in'); fxP(55);
-
-    // 6. HSN adjustment per rate
-    // Total B2B taxable per rate (before removal)
-    const totalB2bTaxableByRate = {};
-    for(const r of hsnB2b){
-      if(!totalB2bTaxableByRate[r.rate]) totalB2bTaxableByRate[r.rate]=0;
-      totalB2bTaxableByRate[r.rate]+=r.taxable;
-    }
-
-    // For each rate with moved taxable:
-    // - Find all B2B HSN rows for that rate
-    // - Pick the one with HIGHEST taxable (as instructed)
-    // - Subtract the moved amount from that HSN row (proportionally if needed)
-    // - Add to corresponding B2C HSN row (highest taxable for that rate in B2C, or create)
-
-    const newHsnB2b = JSON.parse(JSON.stringify(hsnB2b));
-    const newHsnB2c = JSON.parse(JSON.stringify(hsnB2c));
-
-    for(const [rateStr, movedTaxable] of Object.entries(movedTaxableByRate)) {
-      const rate = parseFloat(rateStr);
-      if(!movedTaxable) continue;
-
-      // Find B2B HSN rows for this rate, sorted by taxable DESC (highest first)
-      const b2bForRate = newHsnB2b
-        .map((r,i)=>({...r,idx:i}))
-        .filter(r=>r.rate===rate)
-        .sort((a,b)=>b.taxable-a.taxable);
-
-      if(!b2bForRate.length) continue;
-
-      // Deduct from the highest-taxable B2B HSN row
-      let remaining = movedTaxable;
-      for(const hsnRow of b2bForRate){
-        if(remaining<=0) break;
-        const deduct = Math.min(remaining, hsnRow.taxable);
-        const ratio = deduct / (hsnRow.taxable||1);
-        const i = hsnRow.idx;
-        newHsnB2b[i].taxable  = Math.max(0, newHsnB2b[i].taxable  - deduct);
-        newHsnB2b[i].totalVal = Math.max(0, newHsnB2b[i].totalVal - deduct - deduct*rate/100);
-        newHsnB2b[i].cgst     = Math.max(0, newHsnB2b[i].cgst     - deduct*rate/2/100);
-        newHsnB2b[i].sgst     = Math.max(0, newHsnB2b[i].sgst     - deduct*rate/2/100);
-        newHsnB2b[i].igst     = Math.max(0, newHsnB2b[i].igst     - deduct*rate/100);
-        newHsnB2b[i].qty      = Math.max(0, Math.round(newHsnB2b[i].qty * (1-ratio)));
-
-        // Add same amount to B2C HSN - find matching HSN code in B2C (highest taxable)
-        const b2cMatch = newHsnB2c
-          .map((r,i)=>({...r,idx:i}))
-          .filter(r=>r.hsn===hsnRow.hsn && r.rate===rate)
-          .sort((a,b)=>b.taxable-a.taxable);
-
-        if(b2cMatch.length>0){
-          const j = b2cMatch[0].idx;
-          newHsnB2c[j].taxable  += deduct;
-          newHsnB2c[j].totalVal += deduct + deduct*rate/100;
-          newHsnB2c[j].cgst     += deduct*rate/2/100;
-          newHsnB2c[j].sgst     += deduct*rate/2/100;
-          newHsnB2c[j].igst     += deduct*rate/100;
-          newHsnB2c[j].qty      += Math.round(hsnRow.qty * ratio);
-        } else {
-          // Create new B2C HSN row
-          newHsnB2c.push({
-            type:'B2C', hsn:hsnRow.hsn, desc:hsnRow.desc, uqc:hsnRow.uqc,
-            qty:Math.round(hsnRow.qty*ratio), totalVal:deduct+deduct*rate/100,
-            rate:rate, taxable:deduct,
-            igst:deduct*rate/100, cgst:deduct*rate/2/100,
-            sgst:deduct*rate/2/100, cess:0
-          });
-        }
-        remaining -= deduct;
-      }
-    }
-    fxP(70);
-
-    // 7. Build output workbook from blank template
-    fxStat('Building output Excel...','in');
-    const tmplBin = Uint8Array.from(atob(TMPL),c=>c.charCodeAt(0));
-    const outWb = XLSX.read(tmplBin,{type:'array',cellStyles:true});
-
-    // Helper: write rows to a sheet
-    function fxWriteRows(ws, rows) {
-      if(!rows||!rows.length)return;
-      const range=XLSX.utils.decode_range(ws['!ref']||'A1');
-      const thdrs=[];
-      for(let c=range.s.c;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r:0,c})];thdrs.push(cell&&cell.v!=null?cell.v.toString():'');}
-      let wr=1;
-      for(let r=1;r<=range.e.r;r++){let has=false;for(let c=range.s.c;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r,c})];if(cell&&cell.v!=null&&cell.v!==''){has=true;break;}}if(has)wr=r+1;}
-      rows.forEach((row,ri)=>{
-        const er=wr+ri;
-        thdrs.forEach((th,ci)=>{
-          if(!th)return;
-          const val=row[th]!==undefined?row[th]:'';
-          const addr=XLSX.utils.encode_cell({r:er,c:range.s.c+ci});
-          if(val===''||val===undefined||val===null){ws[addr]={t:'s',v:''};return;}
-          const sv=val.toString().trim();
-          const n=parseFloat(sv.replace(/,/g,''));
-          if(!isNaN(n)&&sv.match(/^-?\d+\.?\d*$/)&&sv!=='')ws[addr]={t:'n',v:n};
-          else ws[addr]={t:'s',v:sv};
-        });
-      });
-      range.e.r=Math.max(range.e.r,wr+rows.length-1);
-      ws['!ref']=XLSX.utils.encode_range(range);
-    }
-
-    // Write B2B (kept rows only)
-    const wsB2b = outWb.Sheets['b2b'];
-    const b2bOut = keepB2b.map(r=>({
-      'GSTIN/UIN':r.gstin,'Trade Name':r.tradeName,'Invoice No':r.invoiceNo,
-      ' Date of Invoice':r.date,'Invoice Value':r.invoiceValue||'',
-      'GST%':r.rate,'Taxable Value':r.taxable,'CESS':r.cess||'',
-      'Place Of Supply':r.pos,'RCM Applicable':r.rcm,'Invoice Type':r.invType,'E-Commerce GSTIN':r.ecom||''
-    }));
-    fxWriteRows(wsB2b, b2bOut);
-
-    // ── Copy CDNR from speqta output (unchanged) ──
-    if(fxFiles.speqta){
-      const buf=await fxReadBuf(fxFiles.speqta);
-      const srcWb=XLSX.read(buf,{type:'arraybuffer'});
-      // Copy CDNR sheet
-      const wsCdnrSrc=srcWb.Sheets['cdnr'];
-      const wsCdnrDst=outWb.Sheets['cdnr'];
-      if(wsCdnrSrc&&wsCdnrDst){
-        const range=XLSX.utils.decode_range(wsCdnrSrc['!ref']||'A1');
-        const hdrs=[];
-        for(let c=range.s.c;c<=range.e.c;c++){const cell=wsCdnrSrc[XLSX.utils.encode_cell({r:0,c})];hdrs.push(cell&&cell.v!=null?cell.v.toString():'');}
-        const cdnrRows=[];
-        for(let r=1;r<=range.e.r;r++){
-          const row={};let has=false;
-          hdrs.forEach((h,ci)=>{const cell=wsCdnrSrc[XLSX.utils.encode_cell({r,c:range.s.c+ci})];const v=cell&&cell.v!=null?cell.v.toString():'';row[h]=v;if(v!==''&&v!==null)has=true;});
-          if(has)cdnrRows.push(row);
-        }
-        fxWriteRows(wsCdnrDst, cdnrRows);
-      }
-      // Also copy other sheets that fixer doesn't touch: export, nil_exempt, cdnur, adv_tax, adv_tax_adjusted, Docs_issued
-      const copySheets=['export','Nil_exempt_NonGST','cdnur','adv_tax','adv_tax_adjusted','Docs_issued'];
-      for(const sn of copySheets){
-        const wsSrc=srcWb.Sheets[sn];
-        const wsDst=outWb.Sheets[sn];
-        if(!wsSrc||!wsDst)continue;
-        const range=XLSX.utils.decode_range(wsSrc['!ref']||'A1');
-        const hdrs=[];
-        for(let c=range.s.c;c<=range.e.c;c++){const cell=wsSrc[XLSX.utils.encode_cell({r:0,c})];hdrs.push(cell&&cell.v!=null?cell.v.toString():'');}
-        const sheetRows=[];
-        for(let r=1;r<=range.e.r;r++){
-          const row={};let has=false;
-          hdrs.forEach((h,ci)=>{const cell=wsSrc[XLSX.utils.encode_cell({r,c:range.s.c+ci})];const v=cell&&cell.v!=null?cell.v.toString():'';row[h]=v;if(v!==''&&v!==null)has=true;});
-          if(has)sheetRows.push(row);
-        }
-        if(sheetRows.length) fxWriteRows(wsDst, sheetRows);
-      }
-    }
-
-    // ── Write B2CS: merge existing + moved B2B rows, sum by rate → ONE row per rate ──
-    // Accumulate ALL b2cs into one map keyed by rate
-    const mergedB2cs = {};  // rate → {taxable, cess, pos}
-    // 1. Existing b2cs from speqta
-    if(fxFiles.speqta){
-      const buf=await fxReadBuf(fxFiles.speqta);
-      const srcWb=XLSX.read(buf,{type:'arraybuffer'});
-      const ws=srcWb.Sheets['b2cs'];
-      if(ws){
-        const range=XLSX.utils.decode_range(ws['!ref']||'A1');
-        const hdrs=[];
-        for(let c=range.s.c;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r:0,c})];hdrs.push(cell&&cell.v!=null?cell.v.toString():'');}
-        for(let r=1;r<=range.e.r;r++){
-          const row={};let has=false;
-          hdrs.forEach((h,ci)=>{const cell=ws[XLSX.utils.encode_cell({r,c:range.s.c+ci})];const v=cell&&cell.v!=null?cell.v:'';row[h]=v;if(v!==''&&v!==null)has=true;});
-          if(!has)continue;
-          const rate=parseFloat(row['GST%']||row['Rate']||0);
-          const taxable=parseFloat(row['Taxable Value']||0);
-          const cess=parseFloat(row['CESS']||row['Cess Amount']||0);
-          const pos=cleanPos((row['Place Of Supply']||'Karnataka').toString());
-          if(!mergedB2cs[rate]) mergedB2cs[rate]={taxable:0,cess:0,pos:pos};
-          mergedB2cs[rate].taxable += taxable;
-          mergedB2cs[rate].cess    += cess;
-        }
-      }
-    }
-    // 2. Add moved B2B rows (already in b2csByRate)
-    for(const [rateStr, agg] of Object.entries(b2csByRate)){
-      const rate=parseFloat(rateStr);
-      if(!mergedB2cs[rate]) mergedB2cs[rate]={taxable:0,cess:0,pos:agg.pos};
-      mergedB2cs[rate].taxable += agg.taxable;
-      mergedB2cs[rate].cess    += agg.cess;
-    }
-    // 3. Write — one row per rate, sorted ascending
-    const wsB2cs = outWb.Sheets['b2cs'];
-    const finalB2csRows = Object.entries(mergedB2cs)
-      .sort((a,b)=>parseFloat(a[0])-parseFloat(b[0]))
-      .map(([rate,agg])=>({
-        'GST%':parseFloat(rate),
-        'Taxable Value':+agg.taxable.toFixed(2),
-        'CESS':agg.cess?+agg.cess.toFixed(2):'',
-        'Place Of Supply':agg.pos||'Karnataka',
-        'GSTIN of E-Commerce Operator':''
-      }));
-    fxWriteRows(wsB2cs, finalB2csRows);
-
-    // Write HSN (B2B then B2C) - filter out rows with zero taxable
-    const wsHsn = outWb.Sheets['hsn'];
-    const hsnOut = [
-      ...newHsnB2b.filter(r=>r.taxable>0.01).map(r=>({
-        'Type':'B2B','HSN':r.hsn,'Description':r.desc,'UQC':r.uqc,
-        'Total Quantity':r.qty,'Total Value':+r.totalVal.toFixed(2),'Rate':r.rate,
-        'Total Taxable Value':+r.taxable.toFixed(2),'IGST':+r.igst.toFixed(2),
-        'CGST':+r.cgst.toFixed(2),'SGST':+r.sgst.toFixed(2),'CESS':+r.cess.toFixed(2)
-      })),
-      ...newHsnB2c.filter(r=>r.taxable>0.01).map(r=>({
-        'Type':'B2C','HSN':r.hsn,'Description':r.desc,'UQC':r.uqc,
-        'Total Quantity':r.qty,'Total Value':+r.totalVal.toFixed(2),'Rate':r.rate,
-        'Total Taxable Value':+r.taxable.toFixed(2),'IGST':+r.igst.toFixed(2),
-        'CGST':+r.cgst.toFixed(2),'SGST':+r.sgst.toFixed(2),'CESS':+r.cess.toFixed(2)
-      }))
-    ];
-    fxWriteRows(wsHsn, hsnOut);
-
-    fxP(90);
-
-    // 8. Download
-    const outData = XLSX.write(outWb,{bookType:'xlsx',type:'array',cellStyles:true});
-    const blob = new Blob([outData],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    const ts = new Date().toISOString().replace(/[:.]/g,'-').slice(0,-5);
-    saveAs(blob,'GSTR1_Fixed_'+ts+'.xlsx');
-    fxP(100);
-
-    // Show summary
-    const movedCount = moveRows.length;
-    const movedTaxTotal = moveRows.reduce((s,r)=>s+r.taxable,0);
-    const ratesAffected = Object.keys(b2csByRate).join('%, ')+'%';
-    fxStat(`✅ Done! Moved ${movedCount} B2B rows (₹${movedTaxTotal.toFixed(2)} taxable) at rates ${ratesAffected} → B2CS. HSN adjusted.`,'ok');
-    setTimeout(fxClearP,4000);
-  } catch(e){
-    console.error(e);
-    fxStat('❌ Error: '+e.message,'er');
-    fxClearP();
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-function fxStat(m,t){const s=document.getElementById('fx-stat');s.textContent=m;s.className='stat '+t;}
-function fxP(v){document.getElementById('fx-pb').classList.add('on');document.getElementById('fx-pf').style.width=v+'%';}
-function fxClearP(){document.getElementById('fx-pb').classList.remove('on');document.getElementById('fx-pf').style.width='0%';}
-
-</script>
-</body>
-</html>
